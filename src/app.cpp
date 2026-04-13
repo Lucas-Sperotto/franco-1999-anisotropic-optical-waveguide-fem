@@ -136,6 +136,14 @@ std::string format_local_matrix(const LocalMatrix3& matrix) {
     return stream.str();
 }
 
+std::string format_matrix_flags(const LocalMatrix3& matrix) {
+    std::ostringstream stream;
+    stream << "symmetric=" << bool_to_text(is_symmetric(matrix))
+           << ", zero=" << bool_to_text(is_zero_matrix(matrix))
+           << ", trace=" << format_number(matrix_trace(matrix));
+    return stream.str();
+}
+
 std::string determine_run_label(const CliOptions& options,
                                 const std::filesystem::path& output_dir) {
     if (!options.run_label.empty()) {
@@ -169,8 +177,15 @@ int run_application(int argc, char** argv) {
         const Mesh mesh = load_minimal_mesh(mesh_file);
         const TriangleElement& first_triangle = mesh.triangles.front();
         const LinearTriangleP1Element first_element = mesh.make_p1_element(first_triangle);
-        const HomogeneousIsotropicLocalMatrices first_element_matrices =
-            assemble_basic_homogeneous_isotropic_local_matrices(first_element);
+
+        constexpr double kPi = 3.14159265358979323846;
+        const double k0 = config.wavelength_um > 0.0 ? (2.0 * kPi / config.wavelength_um)
+                                                     : 1.0;
+        const ArticleLocalMaterialCoefficients local_material =
+            make_homogeneous_isotropic_local_material(1.0);
+        const ArticleLocalAssemblyOptions local_options{k0};
+        const ArticleLocalMatrices article_local =
+            assemble_article_local_matrices(first_element, local_material, local_options);
 
         const std::filesystem::path output_dir =
             std::filesystem::absolute(options.output_dir).lexically_normal();
@@ -196,7 +211,7 @@ int run_application(int argc, char** argv) {
 
         write_text_file(
             meta_dir / "run_summary.txt",
-            "status: stub_local_element_ready\n"
+            "status: stub_article_local_terms_ready\n"
             "stub_mode: yes\n"
             "stub_warning: Global FEM assembly and the full generalized eigenproblem "
             "are not implemented yet.\n"
@@ -218,6 +233,8 @@ int run_application(int argc, char** argv) {
             "mesh_node_count: " + std::to_string(mesh.nodes.size()) + "\n"
             "mesh_triangle_count: " + std::to_string(mesh.triangles.size()) + "\n"
             "local_assembly_available: yes\n"
+            "local_formulation_model: " + local_material.model_label + "\n"
+            "k0_used: " + format_number(k0) + "\n"
             "first_element_id: " + std::to_string(first_element.element_id) + "\n"
             "first_element_global_node_ids: [" +
                 std::to_string(first_element.global_node_ids[0]) + ", " +
@@ -230,16 +247,12 @@ int run_application(int argc, char** argv) {
             "first_element_area: " + format_number(first_element.coefficients.area) + "\n"
             "first_element_orientation: " +
                 std::string(to_string(first_element.orientation)) + "\n"
-            "first_element_mass_trace: " +
-                format_number(matrix_trace(first_element_matrices.consistent_mass)) + "\n"
-            "first_element_stiffness_trace: " +
-                format_number(matrix_trace(first_element_matrices.laplacian_stiffness)) +
-                "\n"
-            "first_element_mass_symmetric: " +
-                bool_to_text(is_symmetric(first_element_matrices.consistent_mass)) + "\n"
-            "first_element_stiffness_symmetric: " +
-                bool_to_text(is_symmetric(first_element_matrices.laplacian_stiffness)) +
-                "\n");
+            "M_local_flags: " + format_matrix_flags(article_local.M_local) + "\n"
+            "F1_local_flags: " + format_matrix_flags(article_local.F1_local) + "\n"
+            "F2_local_flags: " + format_matrix_flags(article_local.F2_local) + "\n"
+            "F3_local_flags: " + format_matrix_flags(article_local.F3_local) + "\n"
+            "F4_local_flags: " + format_matrix_flags(article_local.F4_local) + "\n"
+            "F_local_flags: " + format_matrix_flags(article_local.F_local) + "\n");
 
         write_text_file(
             results_dir / "geometry_summary.txt",
@@ -262,12 +275,20 @@ int run_application(int argc, char** argv) {
 
         write_text_file(
             results_dir / "local_assembly_audit.txt",
-            "assembly_mode: homogeneous_isotropic_unit_coefficients\n"
-            "note: These are reusable local matrices for the element level only.\n"
-            "consistent_mass_matrix:\n" +
-                format_local_matrix(first_element_matrices.consistent_mass) + "\n"
-            "laplacian_stiffness_matrix:\n" +
-                format_local_matrix(first_element_matrices.laplacian_stiffness) + "\n");
+            "assembly_mode: article_local_term_decomposition\n"
+            "material_model: " + local_material.model_label + "\n"
+            "note: This audit stays at the element level and does not assemble a global system.\n"
+            "reduction_note: constant homogeneous isotropic coefficients imply zero material gradients,\n"
+            "so derivative-driven contributions in F2/F3 vanish and F4 is identically zero.\n"
+            "M_local:\n" + format_local_matrix(article_local.M_local) + "\n"
+            "F1_local:\n" + format_local_matrix(article_local.F1_local) + "\n"
+            "F2_local:\n" + format_local_matrix(article_local.F2_local) + "\n"
+            "F3_local:\n" + format_local_matrix(article_local.F3_local) + "\n"
+            "F4_local:\n" + format_local_matrix(article_local.F4_local) + "\n"
+            "F_local:\n" + format_local_matrix(article_local.F_local) + "\n"
+            "mass_integral:\n" + format_local_matrix(article_local.mass_integral) + "\n"
+            "stiffness_x:\n" + format_local_matrix(article_local.stiffness_x) + "\n"
+            "stiffness_y:\n" + format_local_matrix(article_local.stiffness_y) + "\n");
 
         write_text_file(
             results_dir / "modal_summary.csv",
@@ -277,9 +298,9 @@ int run_application(int argc, char** argv) {
         write_text_file(
             results_dir / "README.txt",
             "This run validates the case contract, mesh parsing, triangle geometry,\n"
-            "and basic local element matrices. Global FEM assembly is not implemented yet.\n");
+            "and article-oriented local term matrices. Global FEM assembly is not implemented yet.\n");
 
-        std::cout << "waveguide_solver: local-element stub run completed\n";
+        std::cout << "waveguide_solver: article-local-term stub run completed\n";
         std::cout << "  case id       : " << config.case_id << "\n";
         std::cout << "  run label     : " << run_label << "\n";
         std::cout << "  mesh file     : " << mesh_file.string() << "\n";

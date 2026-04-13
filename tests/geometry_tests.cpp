@@ -84,30 +84,74 @@ int main() {
             element.orientation == waveguide::TriangleOrientation::counter_clockwise,
             "unexpected element orientation");
 
-        const waveguide::HomogeneousIsotropicLocalMatrices local_matrices =
-            waveguide::assemble_basic_homogeneous_isotropic_local_matrices(element);
-        expect_true(local_matrices.consistent_mass.size() == 3,
-                    "mass matrix has unexpected row count");
-        expect_true(local_matrices.consistent_mass[0].size() == 3,
-                    "mass matrix has unexpected column count");
-        expect_true(local_matrices.laplacian_stiffness.size() == 3,
-                    "stiffness matrix has unexpected row count");
-        expect_true(waveguide::is_symmetric(local_matrices.consistent_mass),
-                    "mass matrix should be symmetric");
-        expect_true(waveguide::is_symmetric(local_matrices.laplacian_stiffness),
-                    "stiffness matrix should be symmetric");
+        const waveguide::ArticleLocalMaterialCoefficients material =
+            waveguide::make_homogeneous_isotropic_local_material(1.0);
+        const waveguide::ArticleLocalAssemblyOptions options{1.0};
+        const waveguide::ArticleLocalMatrices local_matrices =
+            waveguide::assemble_article_local_matrices(element, material, options);
 
-        expect_near(local_matrices.consistent_mass[0][0], 2.0 / 24.0, "M11");
-        expect_near(local_matrices.consistent_mass[0][1], 1.0 / 24.0, "M12");
-        expect_near(local_matrices.consistent_mass[1][1], 2.0 / 24.0, "M22");
-        expect_near(local_matrices.consistent_mass[2][2], 2.0 / 24.0, "M33");
+        expect_true(local_matrices.M_local.size() == 3,
+                    "M_local has unexpected row count");
+        expect_true(local_matrices.M_local[0].size() == 3,
+                    "M_local has unexpected column count");
+        expect_true(local_matrices.F1_local.size() == 3,
+                    "F1_local has unexpected row count");
+        expect_true(local_matrices.F2_local.size() == 3,
+                    "F2_local has unexpected row count");
+        expect_true(local_matrices.F3_local.size() == 3,
+                    "F3_local has unexpected row count");
+        expect_true(local_matrices.F4_local.size() == 3,
+                    "F4_local has unexpected row count");
+        expect_true(local_matrices.F_local.size() == 3,
+                    "F_local has unexpected row count");
 
-        expect_near(local_matrices.laplacian_stiffness[0][0], 1.0, "K11");
-        expect_near(local_matrices.laplacian_stiffness[0][1], -0.5, "K12");
-        expect_near(local_matrices.laplacian_stiffness[0][2], -0.5, "K13");
-        expect_near(local_matrices.laplacian_stiffness[1][1], 0.5, "K22");
-        expect_near(local_matrices.laplacian_stiffness[1][2], 0.0, "K23");
-        expect_near(local_matrices.laplacian_stiffness[2][2], 0.5, "K33");
+        expect_true(waveguide::is_symmetric(local_matrices.M_local),
+                    "M_local should be symmetric");
+        expect_true(waveguide::is_symmetric(local_matrices.F1_local),
+                    "F1_local should be symmetric");
+        expect_true(waveguide::is_symmetric(local_matrices.F2_local),
+                    "F2_local should be symmetric in the constant reduction");
+        expect_true(waveguide::is_symmetric(local_matrices.F3_local),
+                    "F3_local should be symmetric in the constant reduction");
+        expect_true(waveguide::is_symmetric(local_matrices.F_local),
+                    "F_local should be symmetric in the constant reduction");
+        expect_true(waveguide::is_zero_matrix(local_matrices.F4_local),
+                    "F4_local should vanish for the homogeneous isotropic case");
+
+        expect_near(local_matrices.M_local[0][0], 2.0 / 24.0, "M11");
+        expect_near(local_matrices.M_local[0][1], 1.0 / 24.0, "M12");
+        expect_near(local_matrices.M_local[1][1], 2.0 / 24.0, "M22");
+        expect_near(local_matrices.M_local[2][2], 2.0 / 24.0, "M33");
+
+        expect_near(local_matrices.F1_local[0][0], 2.0 / 24.0, "F1_11");
+        expect_near(local_matrices.F1_local[0][1], 1.0 / 24.0, "F1_12");
+
+        expect_near(local_matrices.F2_local[0][0], 0.5, "F2_11");
+        expect_near(local_matrices.F2_local[0][1], -0.5, "F2_12");
+        expect_near(local_matrices.F2_local[0][2], 0.0, "F2_13");
+
+        expect_near(local_matrices.F3_local[0][0], 0.5, "F3_11");
+        expect_near(local_matrices.F3_local[0][1], 0.0, "F3_12");
+        expect_near(local_matrices.F3_local[0][2], -0.5, "F3_13");
+
+        const waveguide::LocalMatrix3 expected_f_local =
+            waveguide::add_local_matrices(
+                waveguide::subtract_local_matrices(
+                    waveguide::subtract_local_matrices(local_matrices.F1_local,
+                                                      local_matrices.F2_local),
+                    local_matrices.F3_local),
+                local_matrices.F4_local);
+
+        for (std::size_t i = 0; i < expected_f_local.size(); ++i) {
+            for (std::size_t j = 0; j < expected_f_local[i].size(); ++j) {
+                expect_near(local_matrices.F_local[i][j], expected_f_local[i][j],
+                            "F_local consistency");
+            }
+        }
+
+        expect_near(local_matrices.F_local[0][0], -22.0 / 24.0, "F_11");
+        expect_near(local_matrices.F_local[0][1], 13.0 / 24.0, "F_12");
+        expect_near(local_matrices.F_local[0][2], 13.0 / 24.0, "F_13");
 
         const waveguide::TriangleGeometry cw_triangle{{
             waveguide::Point2D{0.0, 0.0},
