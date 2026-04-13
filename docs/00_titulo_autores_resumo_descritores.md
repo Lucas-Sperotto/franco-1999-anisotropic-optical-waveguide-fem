@@ -60,4 +60,4 @@ Este arquivo foi mantido como uma abertura fiel ao artigo, mas com acréscimos m
 
 ---
 
-**Navegação:** [Índice](README.md) | [Próximo](01_introducao.md)
+**Navegação:** [Anterior](README.md) | [Índice](README.md) | [Próximo](01_introducao.md)

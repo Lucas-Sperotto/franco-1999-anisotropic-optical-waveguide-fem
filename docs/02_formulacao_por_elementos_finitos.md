@@ -62,13 +62,10 @@ $$
 $$
 
 $$
-[F_4] = \sum_{i,j=1}^{3} \left(\frac{b_i b_j}{2A} \int_{\zeta_1}\int_{\zeta_2} \left( \delta_z n_z^2 \frac{\partial g_z^2}{\partial \zeta_i} \right) \left( \delta_x \frac{\partial n_x^2}{\partial \zeta_j} \{N\}^T \{N\} \right) d\zeta_1 d\zeta_2\right)
-$$
-
-$$
-\qquad\qquad + \sum_{i,j=1}^{3} \left(\frac{b_i b_j}{2A} \int_{\zeta_1}\int_{\zeta_2}
-\left( \delta_z n_z^2 \frac{\partial g_z^2}{\partial \zeta_i} \right)
-\left( n_x^2 \{N\}^T \frac{\partial \{N\}}{\partial \zeta_j} \right) d\zeta_1 d\zeta_2\right).
+\begin{aligned}
+[F_4] = & \sum_{i,j=1}^{3} \left(\frac{b_i b_j}{2A} \int_{\zeta_1}\int_{\zeta_2} \left( \delta_z n_z^2 \frac{\partial g_z^2}{\partial \zeta_i} \right) \left( \delta_x \frac{\partial n_x^2}{\partial \zeta_j} \{N\}^T \{N\} \right) d\zeta_1 d\zeta_2\right) \\
+ & + \sum_{i,j=1}^{3} \left(\frac{b_i b_j}{2A} \int_{\zeta_1}\int_{\zeta_2} \left( \delta_z n_z^2 \frac{\partial g_z^2}{\partial \zeta_i} \right) \left( n_x^2 \{N\}^T \frac{\partial \{N\}}{\partial \zeta_j} \right) d\zeta_1 d\zeta_2\right)
+\end{aligned}
 $$
 
 $A$ é a área do triângulo, $\{N\}$ é um vetor linha que representa um conjunto completo de funções de base, $\{\ \}^T$ denota uma matriz transposta, $\zeta_i$ são as coordenadas homogêneas independentes, e $b_i$ e $c_i$ são os coeficientes de transformação de coordenadas do sistema homogêneo.

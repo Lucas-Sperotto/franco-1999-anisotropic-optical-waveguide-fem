@@ -32,9 +32,9 @@ Do ponto de vista didático, este é o primeiro caso em que o leitor precisa aco
 
 ## B. Guia de onda Ti-difundido em $LiNbO_3$
 
-Se o caso APE já introduz anisotropia e difusão, o guia Ti:$LiNbO_3$ acrescenta ainda dependência explícita de comprimento de onda e parâmetros distintos para os ramos extraordinário e ordinário. Trata-se, portanto, do caso materialmente mais rico entre os exemplos do artigo.
+Se o caso APE já introduz anisotropia e difusão, o guia $Ti:LiNbO_3$ acrescenta ainda dependência explícita de comprimento de onda e parâmetros distintos para os ramos extraordinário e ordinário. Trata-se, portanto, do caso materialmente mais rico entre os exemplos do artigo.
 
-Para guias de onda de canal Ti:$LiNbO_3$, o índice de refração na região difundida segue [21]:
+Para guias de onda de canal $Ti:LiNbO_3$, o índice de refração na região difundida segue [21]:
 
 ### (11)
 
