@@ -42,6 +42,7 @@ target_link_libraries(waveguide_solver
 )
 
 include(CTest)
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 if(BUILD_TESTING)
     add_executable(waveguide_geometry_tests
@@ -118,5 +119,52 @@ if(BUILD_TESTING)
     set_tests_properties(waveguide_solver_planar_smoke_artifacts
         PROPERTIES
             FIXTURES_REQUIRED waveguide_solver_planar_fixture
+    )
+
+    add_test(NAME waveguide_planar_sweep_smoke
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/run_planar_diffuse_sweep.py
+            --smoke
+            --output-root ${CMAKE_BINARY_DIR}/test_output/planar_sweep
+    )
+
+    set_tests_properties(waveguide_planar_sweep_smoke
+        PROPERTIES
+            FIXTURES_SETUP waveguide_planar_sweep_fixture
+    )
+
+    add_test(NAME waveguide_planar_sweep_consolidate
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/consolidate_planar_diffuse_sweep.py
+            --sweep-root ${CMAKE_BINARY_DIR}/test_output/planar_sweep
+    )
+
+    set_tests_properties(waveguide_planar_sweep_consolidate
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_planar_sweep_fixture
+            FIXTURES_SETUP waveguide_planar_sweep_consolidated_fixture
+    )
+
+    add_test(NAME waveguide_planar_sweep_plot
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/plot_planar_diffuse_sweep.py
+            --sweep-root ${CMAKE_BINARY_DIR}/test_output/planar_sweep
+    )
+
+    set_tests_properties(waveguide_planar_sweep_plot
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_planar_sweep_consolidated_fixture
+            FIXTURES_SETUP waveguide_planar_sweep_plotted_fixture
+    )
+
+    add_test(NAME waveguide_planar_sweep_artifacts
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/check_planar_sweep_outputs.py
+            ${CMAKE_BINARY_DIR}/test_output/planar_sweep
+    )
+
+    set_tests_properties(waveguide_planar_sweep_artifacts
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_planar_sweep_plotted_fixture
     )
 endif()

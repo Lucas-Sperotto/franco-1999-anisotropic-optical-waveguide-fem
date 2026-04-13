@@ -5,7 +5,7 @@ case:
   description: "Planar diffuse isotropic guide with exponential profile depending on y"
 
 mesh:
-  file: ../meshes/planar_strip_3x9.mesh
+  file: ../meshes/planar_strip_y6_fine.mesh
 
 material:
   model: planar_diffuse_isotropic_exponential
