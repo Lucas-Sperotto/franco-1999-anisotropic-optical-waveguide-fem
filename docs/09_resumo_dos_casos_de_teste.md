@@ -124,6 +124,7 @@ $$
 $$
 
 com $n_{3av} = 1.47$;
+
 - comparação com VIE, VFEM e SFEM.
 
 **Papel na validação.** Este caso combina geometria de canal, perfil por partes e refinamento de malha, sendo um bom teste de robustez antes dos casos anisotrópicos.
