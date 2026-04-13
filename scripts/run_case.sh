@@ -24,7 +24,8 @@ mkdir -p "${OUTPUT_DIR}/logs"
 
 "${REPO_ROOT}/build/waveguide_solver" \
     --case "${CASE_FILE}" \
-    --output "${OUTPUT_DIR}" | tee "${OUTPUT_DIR}/logs/solver.stdout.log"
+    --output "${OUTPUT_DIR}" \
+    --run-label "${RUN_LABEL}" | tee "${OUTPUT_DIR}/logs/solver.stdout.log"
 
 echo
 echo "Execução concluída."

@@ -7,12 +7,13 @@
 namespace waveguide {
 
 struct CaseConfig {
-    std::string case_id = "unnamed_case";
-    std::string description = "No description provided.";
+    int schema_version = 0;
+    std::string case_id;
+    std::string description;
     std::string mesh_file;
     int requested_modes = 1;
     double wavelength_um = 0.0;
-    std::string output_tag = "default";
+    std::string output_tag;
     std::map<std::string, std::string> raw_entries;
 };
 

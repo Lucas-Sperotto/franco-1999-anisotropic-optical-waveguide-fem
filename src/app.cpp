@@ -1,9 +1,13 @@
 #include "waveguide_solver/app.hpp"
 #include "waveguide_solver/config.hpp"
+#include "waveguide_solver/geometry.hpp"
+#include "waveguide_solver/mesh.hpp"
 
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 
@@ -13,6 +17,7 @@ namespace {
 struct CliOptions {
     std::filesystem::path case_file;
     std::filesystem::path output_dir;
+    std::string run_label;
     bool show_help = false;
 };
 
@@ -20,7 +25,8 @@ void print_usage() {
     std::cout
         << "waveguide_solver\n"
         << "Uso:\n"
-        << "  waveguide_solver --case <arquivo.yaml> --output <diretorio>\n"
+        << "  waveguide_solver --case <arquivo.yaml> --output <diretorio> "
+           "[--run-label <rotulo>]\n"
         << "  waveguide_solver --help\n";
 }
 
@@ -48,6 +54,14 @@ CliOptions parse_arguments(int argc, char** argv) {
                 throw std::runtime_error("Missing value after --output");
             }
             options.output_dir = argv[++i];
+            continue;
+        }
+
+        if (arg == "--run-label") {
+            if (i + 1 >= argc) {
+                throw std::runtime_error("Missing value after --run-label");
+            }
+            options.run_label = argv[++i];
             continue;
         }
 
@@ -87,6 +101,20 @@ std::string bool_to_text(bool value) {
     return value ? "yes" : "no";
 }
 
+std::string format_number(double value) {
+    std::ostringstream stream;
+    stream << std::fixed << std::setprecision(6) << value;
+    return stream.str();
+}
+
+std::string determine_run_label(const CliOptions& options,
+                                const std::filesystem::path& output_dir) {
+    if (!options.run_label.empty()) {
+        return options.run_label;
+    }
+    return output_dir.filename().string();
+}
+
 }  // namespace
 
 int run_application(int argc, char** argv) {
@@ -103,14 +131,28 @@ int run_application(int argc, char** argv) {
 
         const std::filesystem::path mesh_file =
             make_absolute_from_case(case_file, config.mesh_file);
-        const bool mesh_exists = std::filesystem::exists(mesh_file);
-        if (!mesh_exists) {
+        const bool mesh_exists_on_disk = std::filesystem::exists(mesh_file);
+        if (!mesh_exists_on_disk) {
             throw std::runtime_error(
                 "Referenced mesh file does not exist: " + mesh_file.string());
         }
 
+        const Mesh mesh = load_minimal_mesh(mesh_file);
+        const TriangleElement& first_triangle = mesh.triangles.front();
+        const TriangleGeometry first_triangle_geometry =
+            mesh.make_triangle_geometry(first_triangle);
+        const double first_triangle_signed_area =
+            compute_signed_area(first_triangle_geometry);
+        const double first_triangle_area =
+            compute_area(first_triangle_geometry);
+        const TriangleOrientation first_triangle_orientation =
+            compute_orientation(first_triangle_geometry);
+        const P1ShapeGradients first_triangle_gradients =
+            compute_p1_shape_gradients(first_triangle_geometry);
+
         const std::filesystem::path output_dir =
             std::filesystem::absolute(options.output_dir).lexically_normal();
+        const std::string run_label = determine_run_label(options, output_dir);
         const std::filesystem::path inputs_dir = output_dir / "inputs";
         const std::filesystem::path logs_dir = output_dir / "logs";
         const std::filesystem::path meta_dir = output_dir / "meta";
@@ -125,35 +167,74 @@ int run_application(int argc, char** argv) {
             case_file,
             inputs_dir / "case_snapshot.yaml",
             std::filesystem::copy_options::overwrite_existing);
+        std::filesystem::copy_file(
+            mesh_file,
+            inputs_dir / "mesh_snapshot.mesh",
+            std::filesystem::copy_options::overwrite_existing);
 
         write_text_file(
             meta_dir / "run_summary.txt",
-            "status: infrastructure_stub\n"
+            "status: stub_geometry_ready\n"
+            "stub_mode: yes\n"
+            "stub_warning: Global FEM assembly and the full generalized eigenproblem "
+            "are not implemented yet.\n"
+            "schema_version: " + std::to_string(config.schema_version) + "\n"
             "case_id: " + config.case_id + "\n"
             "description: " + config.description + "\n"
-            "case_file: " + case_file.string() + "\n"
-            "mesh_file: " + mesh_file.string() + "\n"
-            "mesh_exists: " + bool_to_text(mesh_exists) + "\n"
-            "requested_modes: " + std::to_string(config.requested_modes) + "\n"
-            "wavelength_um: " + std::to_string(config.wavelength_um) + "\n"
+            "case_file_resolved: " + case_file.string() + "\n"
+            "case_directory_resolved: " + case_file.parent_path().string() + "\n"
+            "mesh_file_input: " + config.mesh_file + "\n"
+            "mesh_file_resolved: " + mesh_file.string() + "\n"
+            "mesh_exists_on_disk: " + bool_to_text(mesh_exists_on_disk) + "\n"
+            "output_directory_resolved: " + output_dir.string() + "\n"
+            "run_label: " + run_label + "\n"
             "output_tag: " + config.output_tag + "\n"
-            "note: numerical formulation not implemented yet\n");
+            "requested_modes: " + std::to_string(config.requested_modes) + "\n"
+            "wavelength_um: " + format_number(config.wavelength_um) + "\n"
+            "mesh_format: " + mesh.format + "\n"
+            "mesh_dimension: " + std::to_string(mesh.dimension) + "\n"
+            "mesh_node_count: " + std::to_string(mesh.nodes.size()) + "\n"
+            "mesh_triangle_count: " + std::to_string(mesh.triangles.size()) + "\n"
+            "first_triangle_id: " + std::to_string(first_triangle.id) + "\n"
+            "first_triangle_signed_area: " +
+                format_number(first_triangle_signed_area) + "\n"
+            "first_triangle_area: " + format_number(first_triangle_area) + "\n"
+            "first_triangle_orientation: " +
+                std::string(to_string(first_triangle_orientation)) + "\n");
+
+        write_text_file(
+            results_dir / "geometry_summary.txt",
+            "first_triangle_id: " + std::to_string(first_triangle.id) + "\n"
+            "signed_area: " + format_number(first_triangle_signed_area) + "\n"
+            "area: " + format_number(first_triangle_area) + "\n"
+            "orientation: " + std::string(to_string(first_triangle_orientation)) +
+                "\n"
+            "grad_N1: (" + format_number(first_triangle_gradients[0][0]) + ", " +
+                format_number(first_triangle_gradients[0][1]) + ")\n"
+            "grad_N2: (" + format_number(first_triangle_gradients[1][0]) + ", " +
+                format_number(first_triangle_gradients[1][1]) + ")\n"
+            "grad_N3: (" + format_number(first_triangle_gradients[2][0]) + ", " +
+                format_number(first_triangle_gradients[2][1]) + ")\n");
 
         write_text_file(
             results_dir / "modal_summary.csv",
             "mode_index,status,notes\n"
-            "1,pending_implementation,Infrastructure smoke run only\n");
+            "1,pending_implementation,Stub mode: geometry and mesh contract only\n");
 
         write_text_file(
             results_dir / "README.txt",
-            "This run validates repository structure, case loading, path resolution,\n"
-            "and output generation. No finite element formulation is implemented yet.\n");
+            "This run validates the case contract, mesh parsing, triangle geometry,\n"
+            "and output generation. Global FEM assembly is not implemented yet.\n");
 
-        std::cout << "waveguide_solver: infrastructure smoke run completed\n";
+        std::cout << "waveguide_solver: geometry-aware stub run completed\n";
         std::cout << "  case id       : " << config.case_id << "\n";
+        std::cout << "  run label     : " << run_label << "\n";
         std::cout << "  mesh file     : " << mesh_file.string() << "\n";
+        std::cout << "  triangle area : " << format_number(first_triangle_area) << "\n";
+        std::cout << "  orientation   : " << to_string(first_triangle_orientation)
+                  << "\n";
         std::cout << "  output folder : " << output_dir.string() << "\n";
-        std::cout << "  note          : FEM formulation not implemented yet\n";
+        std::cout << "  note          : global FEM assembly not implemented yet\n";
 
         return 0;
     } catch (const std::exception& error) {

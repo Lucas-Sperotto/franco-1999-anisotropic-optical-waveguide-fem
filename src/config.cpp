@@ -2,6 +2,7 @@
 
 #include <cctype>
 #include <fstream>
+#include <map>
 #include <sstream>
 #include <stdexcept>
 
@@ -61,6 +62,53 @@ std::string get_optional_entry(const CaseConfig& config,
     return it->second;
 }
 
+int parse_required_int(const CaseConfig& config, const std::string& key) {
+    const std::string value = require_entry(config, key);
+    try {
+        return std::stoi(value);
+    } catch (const std::exception&) {
+        throw std::runtime_error("Expected integer value for case entry: " + key);
+    }
+}
+
+int parse_required_positive_int(const CaseConfig& config, const std::string& key) {
+    const int value = parse_required_int(config, key);
+    if (value <= 0) {
+        throw std::runtime_error("Expected positive integer value for case entry: " +
+                                 key);
+    }
+    return value;
+}
+
+double parse_required_nonnegative_double(const CaseConfig& config,
+                                         const std::string& key) {
+    const std::string value = require_entry(config, key);
+    try {
+        const double parsed = std::stod(value);
+        if (parsed < 0.0) {
+            throw std::runtime_error("Expected nonnegative value for case entry: " +
+                                     key);
+        }
+        return parsed;
+    } catch (const std::invalid_argument&) {
+        throw std::runtime_error("Expected floating-point value for case entry: " +
+                                 key);
+    } catch (const std::out_of_range&) {
+        throw std::runtime_error("Floating-point value out of range for case entry: " +
+                                 key);
+    }
+}
+
+void validate_schema_version(int schema_version) {
+    constexpr int kSupportedSchemaVersion = 1;
+    if (schema_version != kSupportedSchemaVersion) {
+        throw std::runtime_error("Unsupported case schema_version: " +
+                                 std::to_string(schema_version) +
+                                 ". Supported version: " +
+                                 std::to_string(kSupportedSchemaVersion));
+    }
+}
+
 }  // namespace
 
 CaseConfig load_case_config(const std::filesystem::path& case_file) {
@@ -109,24 +157,24 @@ CaseConfig load_case_config(const std::filesystem::path& case_file) {
             full_key = current_section + "." + key;
         }
 
-        config.raw_entries[full_key] = value;
+        const auto [it, inserted] = config.raw_entries.emplace(full_key, value);
+        if (!inserted) {
+            throw std::runtime_error("Duplicate case entry encountered: " + full_key);
+        }
     }
 
-    config.case_id =
-        get_optional_entry(config, "case.id", config.case_id);
-    config.description =
-        get_optional_entry(config, "case.description", config.description);
+    config.schema_version = parse_required_int(config, "schema_version");
+    validate_schema_version(config.schema_version);
+
+    config.case_id = require_entry(config, "case.id");
+    config.description = require_entry(config, "case.description");
     config.mesh_file = require_entry(config, "mesh.file");
     config.output_tag =
         get_optional_entry(config, "output.tag", config.case_id);
-
-    const auto requested_modes =
-        get_optional_entry(config, "solver.requested_modes", "1");
-    config.requested_modes = std::stoi(requested_modes);
-
-    const auto wavelength =
-        get_optional_entry(config, "solver.wavelength_um", "0.0");
-    config.wavelength_um = std::stod(wavelength);
+    config.requested_modes =
+        parse_required_positive_int(config, "solver.requested_modes");
+    config.wavelength_um =
+        parse_required_nonnegative_double(config, "solver.wavelength_um");
 
     return config;
 }
