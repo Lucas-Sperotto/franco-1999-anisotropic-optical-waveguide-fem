@@ -99,6 +99,24 @@ double parse_required_nonnegative_double(const CaseConfig& config,
     }
 }
 
+double parse_required_positive_double(const CaseConfig& config,
+                                      const std::string& key) {
+    const std::string value = require_entry(config, key);
+    try {
+        const double parsed = std::stod(value);
+        if (parsed <= 0.0) {
+            throw std::runtime_error("Expected positive value for case entry: " + key);
+        }
+        return parsed;
+    } catch (const std::invalid_argument&) {
+        throw std::runtime_error("Expected floating-point value for case entry: " +
+                                 key);
+    } catch (const std::out_of_range&) {
+        throw std::runtime_error("Floating-point value out of range for case entry: " +
+                                 key);
+    }
+}
+
 void validate_schema_version(int schema_version) {
     constexpr int kSupportedSchemaVersion = 1;
     if (schema_version != kSupportedSchemaVersion) {
@@ -106,6 +124,23 @@ void validate_schema_version(int schema_version) {
                                  std::to_string(schema_version) +
                                  ". Supported version: " +
                                  std::to_string(kSupportedSchemaVersion));
+    }
+}
+
+void validate_material_model(const std::string& material_model) {
+    if (material_model != "homogeneous_isotropic_constant") {
+        throw std::runtime_error(
+            "Unsupported material.model '" + material_model +
+            "'. Only homogeneous_isotropic_constant is available at this stage");
+    }
+}
+
+void validate_boundary_condition(const std::string& boundary_condition) {
+    if (boundary_condition != "dirichlet_zero_on_boundary" &&
+        boundary_condition != "dirichlet_zero_on_boundary_nodes") {
+        throw std::runtime_error(
+            "Unsupported boundary.condition '" + boundary_condition +
+            "'. Only dirichlet_zero_on_boundary is available at this stage");
     }
 }
 
@@ -169,6 +204,14 @@ CaseConfig load_case_config(const std::filesystem::path& case_file) {
     config.case_id = require_entry(config, "case.id");
     config.description = require_entry(config, "case.description");
     config.mesh_file = require_entry(config, "mesh.file");
+    config.material_model = require_entry(config, "material.model");
+    validate_material_model(config.material_model);
+    config.refractive_index =
+        parse_required_positive_double(config, "material.refractive_index");
+    config.boundary_condition =
+        get_optional_entry(config, "boundary.condition",
+                           "dirichlet_zero_on_boundary");
+    validate_boundary_condition(config.boundary_condition);
     config.output_tag =
         get_optional_entry(config, "output.tag", config.case_id);
     config.requested_modes =

@@ -1,0 +1,14 @@
+# unit_square_center.mesh
+# Minimal mesh with one interior node for global assembly and Dirichlet BC smoke tests.
+
+format simple_mesh_v1
+dimension 2
+node 1 0.0 0.0
+node 2 1.0 0.0
+node 3 1.0 1.0
+node 4 0.0 1.0
+node 5 0.5 0.5
+triangle 1 1 2 5
+triangle 2 2 3 5
+triangle 3 3 4 5
+triangle 4 4 1 5

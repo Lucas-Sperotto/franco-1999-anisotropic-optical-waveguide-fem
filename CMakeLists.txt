@@ -8,8 +8,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(waveguide_core
     src/config.cpp
+    src/dense_matrix.cpp
+    src/eigensolver.cpp
     src/element.cpp
     src/geometry.cpp
+    src/global_assembly.cpp
     src/local_assembly.cpp
     src/material.cpp
     src/mesh.cpp
@@ -49,6 +52,15 @@ if(BUILD_TESTING)
             waveguide_core
     )
 
+    add_executable(waveguide_global_tests
+        tests/global_tests.cpp
+    )
+
+    target_link_libraries(waveguide_global_tests
+        PRIVATE
+            waveguide_core
+    )
+
     add_test(NAME waveguide_solver_help
         COMMAND waveguide_solver --help
     )
@@ -60,7 +72,27 @@ if(BUILD_TESTING)
             --run-label ctest_smoke
     )
 
+    set_tests_properties(waveguide_solver_smoke
+        PROPERTIES
+            FIXTURES_SETUP waveguide_solver_smoke_fixture
+    )
+
     add_test(NAME waveguide_geometry_tests
         COMMAND waveguide_geometry_tests
+    )
+
+    add_test(NAME waveguide_global_tests
+        COMMAND waveguide_global_tests
+    )
+
+    add_test(NAME waveguide_solver_smoke_artifacts
+        COMMAND ${CMAKE_COMMAND}
+            -DSMOKE_OUTPUT_DIR=${CMAKE_BINARY_DIR}/test_output/smoke
+            -P ${CMAKE_SOURCE_DIR}/tests/check_smoke_outputs.cmake
+    )
+
+    set_tests_properties(waveguide_solver_smoke_artifacts
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_solver_smoke_fixture
     )
 endif()

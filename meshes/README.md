@@ -2,7 +2,7 @@
 
 Esta pasta guarda malhas e insumos geométricos associados aos casos.
 
-Neste estágio inicial, o arquivo [placeholder_triangle.mesh](placeholder_triangle.mesh) usa um formato mínimo orientado a teste:
+Neste estágio, os arquivos [placeholder_triangle.mesh](placeholder_triangle.mesh) e [unit_square_center.mesh](unit_square_center.mesh) usam um formato mínimo orientado a teste:
 
 - `format <nome_do_formato>`
 - `dimension <dimensão>`
@@ -14,4 +14,6 @@ Esse formato já é suficiente para validar:
 - leitura de malha;
 - integridade de conectividade;
 - construção da geometria do triângulo linear P1;
-- cálculo de área, orientação e gradientes das funções de forma.
+- cálculo de área, orientação e gradientes das funções de forma;
+- detecção de nós de fronteira para Dirichlet;
+- montagem global mínima em malhas triangulares P1.

@@ -2,10 +2,17 @@ schema_version: 1
 
 case:
   id: case00_smoke
-  description: "Smoke test for repository infrastructure and I/O flow"
+  description: "Smoke test for homogeneous isotropic global assembly and eigenvalue flow"
 
 mesh:
-  file: ../meshes/placeholder_triangle.mesh
+  file: ../meshes/unit_square_center.mesh
+
+material:
+  model: homogeneous_isotropic_constant
+  refractive_index: 2.2
+
+boundary:
+  condition: dirichlet_zero_on_boundary
 
 solver:
   requested_modes: 1
