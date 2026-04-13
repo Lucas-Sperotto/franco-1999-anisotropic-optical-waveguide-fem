@@ -1,35 +1,18 @@
 #pragma once
 
 #include "waveguide_solver/element.hpp"
+#include "waveguide_solver/material.hpp"
+#include "waveguide_solver/quadrature.hpp"
 
 #include <array>
-#include <string>
 
 namespace waveguide {
 
 using LocalMatrix3 = std::array<std::array<double, 3>, 3>;
 
-struct LocalScalarFieldCoefficients {
-    std::array<double, 3> nodal_values{};
-    double representative_value = 0.0;
-    Gradient2D reference_gradient{};
-    Gradient2D global_gradient{};
-    bool is_constant = true;
-};
-
-struct ArticleLocalMaterialCoefficients {
-    LocalScalarFieldCoefficients nx2;
-    LocalScalarFieldCoefficients nz2;
-    LocalScalarFieldCoefficients gz2;
-    bool delta_x = false;
-    bool delta_z = false;
-    bool homogeneous = true;
-    bool isotropic = false;
-    std::string model_label;
-};
-
 struct ArticleLocalAssemblyOptions {
     double k0 = 1.0;
+    ReferenceTriangleQuadratureRule quadrature_rule;
 };
 
 struct ArticleLocalMatrices {
@@ -46,6 +29,8 @@ struct ArticleLocalMatrices {
     LocalMatrix3 stiffness_y{};
 };
 
+ArticleLocalAssemblyOptions make_default_article_local_assembly_options(
+    double k0 = 1.0);
 LocalMatrix3 make_zero_local_matrix();
 LocalMatrix3 add_local_matrices(const LocalMatrix3& lhs, const LocalMatrix3& rhs);
 LocalMatrix3 subtract_local_matrices(const LocalMatrix3& lhs, const LocalMatrix3& rhs);
@@ -54,11 +39,12 @@ LocalMatrix3 make_reference_p1_mass_matrix();
 LocalMatrix3 make_consistent_mass_integral_matrix(const LinearTriangleP1Element& element);
 LocalMatrix3 make_directional_stiffness_x_matrix(const LinearTriangleP1Element& element);
 LocalMatrix3 make_directional_stiffness_y_matrix(const LinearTriangleP1Element& element);
-LocalScalarFieldCoefficients make_constant_local_scalar_field(double value);
-ArticleLocalMaterialCoefficients make_homogeneous_isotropic_local_material(
-    double refractive_index_squared);
 bool supports_constant_coefficient_article_reduction(
     const ArticleLocalMaterialCoefficients& material);
+ArticleLocalMatrices assemble_article_local_matrices_constant_reduction(
+    const LinearTriangleP1Element& element,
+    const ArticleLocalMaterialCoefficients& material,
+    const ArticleLocalAssemblyOptions& options);
 ArticleLocalMatrices assemble_article_local_matrices(
     const LinearTriangleP1Element& element,
     const ArticleLocalMaterialCoefficients& material,
@@ -66,5 +52,6 @@ ArticleLocalMatrices assemble_article_local_matrices(
 bool is_zero_matrix(const LocalMatrix3& matrix, double tolerance = 1.0e-12);
 bool is_symmetric(const LocalMatrix3& matrix, double tolerance = 1.0e-12);
 double matrix_trace(const LocalMatrix3& matrix);
+double max_abs_matrix_difference(const LocalMatrix3& lhs, const LocalMatrix3& rhs);
 
 }  // namespace waveguide

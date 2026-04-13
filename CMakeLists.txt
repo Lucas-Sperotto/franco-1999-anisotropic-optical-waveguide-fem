@@ -11,7 +11,9 @@ add_library(waveguide_core
     src/element.cpp
     src/geometry.cpp
     src/local_assembly.cpp
+    src/material.cpp
     src/mesh.cpp
+    src/quadrature.cpp
 )
 
 target_include_directories(waveguide_core
