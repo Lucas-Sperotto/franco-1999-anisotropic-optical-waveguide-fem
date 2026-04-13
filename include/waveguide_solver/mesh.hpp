@@ -1,6 +1,6 @@
 #pragma once
 
-#include "waveguide_solver/geometry.hpp"
+#include "waveguide_solver/element.hpp"
 
 #include <array>
 #include <filesystem>
@@ -27,6 +27,7 @@ struct Mesh {
 
     const MeshNode& find_node(int node_id) const;
     TriangleGeometry make_triangle_geometry(const TriangleElement& triangle) const;
+    LinearTriangleP1Element make_p1_element(const TriangleElement& triangle) const;
 };
 
 Mesh load_minimal_mesh(const std::filesystem::path& mesh_file);

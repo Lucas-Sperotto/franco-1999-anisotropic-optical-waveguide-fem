@@ -8,7 +8,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(waveguide_core
     src/config.cpp
+    src/element.cpp
     src/geometry.cpp
+    src/local_assembly.cpp
     src/mesh.cpp
 )
 

@@ -75,8 +75,8 @@ void validate_mesh(const Mesh& mesh, const std::filesystem::path& mesh_file) {
             }
         }
 
-        const TriangleGeometry geometry = mesh.make_triangle_geometry(triangle);
-        if (compute_orientation(geometry) == TriangleOrientation::degenerate) {
+        const LinearTriangleP1Element element = mesh.make_p1_element(triangle);
+        if (element.orientation == TriangleOrientation::degenerate) {
             throw std::runtime_error("Degenerate triangle detected in mesh: " +
                                      std::to_string(triangle.id));
         }
@@ -101,6 +101,13 @@ TriangleGeometry Mesh::make_triangle_geometry(const TriangleElement& triangle) c
         find_node(triangle.node_ids[1]).point,
         find_node(triangle.node_ids[2]).point,
     }};
+}
+
+LinearTriangleP1Element Mesh::make_p1_element(const TriangleElement& triangle) const {
+    return make_linear_triangle_p1_element(
+        make_triangle_geometry(triangle),
+        triangle.id,
+        triangle.node_ids);
 }
 
 Mesh load_minimal_mesh(const std::filesystem::path& mesh_file) {

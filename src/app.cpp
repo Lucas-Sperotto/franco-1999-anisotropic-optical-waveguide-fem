@@ -1,8 +1,10 @@
 #include "waveguide_solver/app.hpp"
 #include "waveguide_solver/config.hpp"
-#include "waveguide_solver/geometry.hpp"
+#include "waveguide_solver/element.hpp"
+#include "waveguide_solver/local_assembly.hpp"
 #include "waveguide_solver/mesh.hpp"
 
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -107,6 +109,33 @@ std::string format_number(double value) {
     return stream.str();
 }
 
+std::string format_matrix2x2(const Matrix2x2& matrix) {
+    std::ostringstream stream;
+    stream << "[[" << format_number(matrix[0][0]) << ", " << format_number(matrix[0][1])
+           << "], [" << format_number(matrix[1][0]) << ", " << format_number(matrix[1][1])
+           << "]]";
+    return stream.str();
+}
+
+std::string format_vector3(const std::array<double, 3>& values) {
+    std::ostringstream stream;
+    stream << "[" << format_number(values[0]) << ", " << format_number(values[1])
+           << ", " << format_number(values[2]) << "]";
+    return stream.str();
+}
+
+std::string format_local_matrix(const LocalMatrix3& matrix) {
+    std::ostringstream stream;
+    for (std::size_t i = 0; i < matrix.size(); ++i) {
+        stream << "[" << format_number(matrix[i][0]) << ", " << format_number(matrix[i][1])
+               << ", " << format_number(matrix[i][2]) << "]";
+        if (i + 1 != matrix.size()) {
+            stream << "\n";
+        }
+    }
+    return stream.str();
+}
+
 std::string determine_run_label(const CliOptions& options,
                                 const std::filesystem::path& output_dir) {
     if (!options.run_label.empty()) {
@@ -139,16 +168,9 @@ int run_application(int argc, char** argv) {
 
         const Mesh mesh = load_minimal_mesh(mesh_file);
         const TriangleElement& first_triangle = mesh.triangles.front();
-        const TriangleGeometry first_triangle_geometry =
-            mesh.make_triangle_geometry(first_triangle);
-        const double first_triangle_signed_area =
-            compute_signed_area(first_triangle_geometry);
-        const double first_triangle_area =
-            compute_area(first_triangle_geometry);
-        const TriangleOrientation first_triangle_orientation =
-            compute_orientation(first_triangle_geometry);
-        const P1ShapeGradients first_triangle_gradients =
-            compute_p1_shape_gradients(first_triangle_geometry);
+        const LinearTriangleP1Element first_element = mesh.make_p1_element(first_triangle);
+        const HomogeneousIsotropicLocalMatrices first_element_matrices =
+            assemble_basic_homogeneous_isotropic_local_matrices(first_element);
 
         const std::filesystem::path output_dir =
             std::filesystem::absolute(options.output_dir).lexically_normal();
@@ -174,7 +196,7 @@ int run_application(int argc, char** argv) {
 
         write_text_file(
             meta_dir / "run_summary.txt",
-            "status: stub_geometry_ready\n"
+            "status: stub_local_element_ready\n"
             "stub_mode: yes\n"
             "stub_warning: Global FEM assembly and the full generalized eigenproblem "
             "are not implemented yet.\n"
@@ -195,43 +217,75 @@ int run_application(int argc, char** argv) {
             "mesh_dimension: " + std::to_string(mesh.dimension) + "\n"
             "mesh_node_count: " + std::to_string(mesh.nodes.size()) + "\n"
             "mesh_triangle_count: " + std::to_string(mesh.triangles.size()) + "\n"
-            "first_triangle_id: " + std::to_string(first_triangle.id) + "\n"
-            "first_triangle_signed_area: " +
-                format_number(first_triangle_signed_area) + "\n"
-            "first_triangle_area: " + format_number(first_triangle_area) + "\n"
-            "first_triangle_orientation: " +
-                std::string(to_string(first_triangle_orientation)) + "\n");
+            "local_assembly_available: yes\n"
+            "first_element_id: " + std::to_string(first_element.element_id) + "\n"
+            "first_element_global_node_ids: [" +
+                std::to_string(first_element.global_node_ids[0]) + ", " +
+                std::to_string(first_element.global_node_ids[1]) + ", " +
+                std::to_string(first_element.global_node_ids[2]) + "]\n"
+            "first_element_jacobian_determinant: " +
+                format_number(first_element.jacobian_determinant) + "\n"
+            "first_element_signed_area: " +
+                format_number(first_element.coefficients.signed_area) + "\n"
+            "first_element_area: " + format_number(first_element.coefficients.area) + "\n"
+            "first_element_orientation: " +
+                std::string(to_string(first_element.orientation)) + "\n"
+            "first_element_mass_trace: " +
+                format_number(matrix_trace(first_element_matrices.consistent_mass)) + "\n"
+            "first_element_stiffness_trace: " +
+                format_number(matrix_trace(first_element_matrices.laplacian_stiffness)) +
+                "\n"
+            "first_element_mass_symmetric: " +
+                bool_to_text(is_symmetric(first_element_matrices.consistent_mass)) + "\n"
+            "first_element_stiffness_symmetric: " +
+                bool_to_text(is_symmetric(first_element_matrices.laplacian_stiffness)) +
+                "\n");
 
         write_text_file(
             results_dir / "geometry_summary.txt",
-            "first_triangle_id: " + std::to_string(first_triangle.id) + "\n"
-            "signed_area: " + format_number(first_triangle_signed_area) + "\n"
-            "area: " + format_number(first_triangle_area) + "\n"
-            "orientation: " + std::string(to_string(first_triangle_orientation)) +
+            "first_element_id: " + std::to_string(first_element.element_id) + "\n"
+            "signed_area: " + format_number(first_element.coefficients.signed_area) + "\n"
+            "area: " + format_number(first_element.coefficients.area) + "\n"
+            "orientation: " + std::string(to_string(first_element.orientation)) +
                 "\n"
-            "grad_N1: (" + format_number(first_triangle_gradients[0][0]) + ", " +
-                format_number(first_triangle_gradients[0][1]) + ")\n"
-            "grad_N2: (" + format_number(first_triangle_gradients[1][0]) + ", " +
-                format_number(first_triangle_gradients[1][1]) + ")\n"
-            "grad_N3: (" + format_number(first_triangle_gradients[2][0]) + ", " +
-                format_number(first_triangle_gradients[2][1]) + ")\n");
+            "jacobian: " + format_matrix2x2(first_element.jacobian.values) + "\n"
+            "inverse_jacobian: " + format_matrix2x2(first_element.inverse_jacobian) +
+                "\n"
+            "b_coefficients: " + format_vector3(first_element.coefficients.b) + "\n"
+            "c_coefficients: " + format_vector3(first_element.coefficients.c) + "\n"
+            "grad_N1: (" + format_number(first_element.global_shape_gradients[0][0]) +
+                ", " + format_number(first_element.global_shape_gradients[0][1]) + ")\n"
+            "grad_N2: (" + format_number(first_element.global_shape_gradients[1][0]) +
+                ", " + format_number(first_element.global_shape_gradients[1][1]) + ")\n"
+            "grad_N3: (" + format_number(first_element.global_shape_gradients[2][0]) +
+                ", " + format_number(first_element.global_shape_gradients[2][1]) + ")\n");
+
+        write_text_file(
+            results_dir / "local_assembly_audit.txt",
+            "assembly_mode: homogeneous_isotropic_unit_coefficients\n"
+            "note: These are reusable local matrices for the element level only.\n"
+            "consistent_mass_matrix:\n" +
+                format_local_matrix(first_element_matrices.consistent_mass) + "\n"
+            "laplacian_stiffness_matrix:\n" +
+                format_local_matrix(first_element_matrices.laplacian_stiffness) + "\n");
 
         write_text_file(
             results_dir / "modal_summary.csv",
             "mode_index,status,notes\n"
-            "1,pending_implementation,Stub mode: geometry and mesh contract only\n");
+            "1,pending_implementation,Stub mode: local element assembly only\n");
 
         write_text_file(
             results_dir / "README.txt",
             "This run validates the case contract, mesh parsing, triangle geometry,\n"
-            "and output generation. Global FEM assembly is not implemented yet.\n");
+            "and basic local element matrices. Global FEM assembly is not implemented yet.\n");
 
-        std::cout << "waveguide_solver: geometry-aware stub run completed\n";
+        std::cout << "waveguide_solver: local-element stub run completed\n";
         std::cout << "  case id       : " << config.case_id << "\n";
         std::cout << "  run label     : " << run_label << "\n";
         std::cout << "  mesh file     : " << mesh_file.string() << "\n";
-        std::cout << "  triangle area : " << format_number(first_triangle_area) << "\n";
-        std::cout << "  orientation   : " << to_string(first_triangle_orientation)
+        std::cout << "  element area  : " << format_number(first_element.coefficients.area)
+                  << "\n";
+        std::cout << "  orientation   : " << to_string(first_element.orientation)
                   << "\n";
         std::cout << "  output folder : " << output_dir.string() << "\n";
         std::cout << "  note          : global FEM assembly not implemented yet\n";
