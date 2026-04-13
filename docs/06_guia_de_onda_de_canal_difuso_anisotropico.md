@@ -1,8 +1,12 @@
 # VI. Guia de Onda de Canal Difuso Anisotrópico
 
+Depois dos casos isotrópicos, esta seção introduz os exemplos que motivam diretamente o foco principal do artigo: guias de onda difusos em materiais anisotrópicos de interesse tecnológico. Aqui, a formulação deixa de ser validada apenas contra perfis espaciais variáveis e passa também a ser confrontada com modelos materiais mais ricos, dependentes do processo físico de fabricação.
+
 ## A. Guia de onda obtido por troca protônica com recozimento
 
-Guias de onda ópticos de $LiNbO_3$ obtidos por troca protônica com recozimento (*annealed proton-exchanged* — APE) possuem a propriedade de polarização única, porque o processo APE altera apenas o índice de refração extraordinário.
+Guias de onda ópticos de $LiNbO_3$ obtidos por troca protônica com recozimento (*annealed proton exchange* — APE) possuem a propriedade de polarização única, porque o processo APE altera apenas o índice de refração extraordinário.
+
+Essa observação é central para a leitura desta subseção: a anisotropia não aparece apenas como um formalismo tensorial abstrato, mas como consequência direta do processo de fabricação e da resposta óptica diferenciada do material.
 
 A variação do índice após o processo de troca protônica (PE) é aproximada por um índice inicial em degrau ($\Delta n_{\mathrm{PE}} = 0.12$). Subsequentemente, o processo de recozimento foi simulado por uma equação de difusão anisotrópica linear bidimensional resolvida pelo método dos elementos finitos.
 
@@ -20,13 +24,17 @@ A Fig. 6 mostra as curvas de dispersão para os quatro modos $E^x$ de menor orde
 
 A dispersão do índice de refração não foi considerada neste exemplo. Uma análise detalhada para esse caso foi apresentada em um trabalho anterior [9].
 
-![Figura 6 - Curvas de dispersão para os quatro modos Ex de menor ordem em guia APE x-cut de LiNbO3.](img/fig_6.png)
+![Figura 6 - Curvas de dispersão para os quatro modos E^x de menor ordem em guia APE x-cut de LiNbO3.](img/fig_6.png)
 
-**Fig. 6.** Curvas de dispersão para os quatro modos $E^x$ de menor ordem em guia de onda APE de $LiNbO_3$ com corte em $x$. Para $360^\circ$C, as constantes de difusão do recozimento são $ D_a(x\text{-cut}) = 0.92\ \mu\text{m}^2/\text{h} $, $ D_a(z\text{-cut}) = 0.77\ \mu\text{m}^2/\text{h} $, e $ \lambda_0 = 0.6328\ \mu\text{m} $.
+**Fig. 6.** Curvas de dispersão para os quatro modos $E^x$ de menor ordem em guia de onda APE de $LiNbO_3$ com corte em $x$. Para $360^\circ$C, as constantes de difusão do recozimento são $D_a(x\text{-cut}) = 0.92\ \mu\text{m}^2/\text{h}$, $D_a(z\text{-cut}) = 0.77\ \mu\text{m}^2/\text{h}$, e $\lambda_0 = 0.6328\ \mu\text{m}$.
 
-## B. Guia de onda Ti-difundido em LiNbO$_3$
+Do ponto de vista didático, este é o primeiro caso em que o leitor precisa acompanhar, simultaneamente, a formulação modal, a anisotropia do meio e a origem física do perfil de índice. Para a futura implementação, isso sugere separar claramente a discretização FEM da modelagem específica do processo APE.
 
-Para guias de onda de canal Ti:LiNbO$_3$, o índice de refração na região difundida segue [21]:
+## B. Guia de onda Ti-difundido em $LiNbO_3$
+
+Se o caso APE já introduz anisotropia e difusão, o guia Ti:$LiNbO_3$ acrescenta ainda dependência explícita de comprimento de onda e parâmetros distintos para os ramos extraordinário e ordinário. Trata-se, portanto, do caso materialmente mais rico entre os exemplos do artigo.
+
+Para guias de onda de canal Ti:$LiNbO_3$, o índice de refração na região difundida segue [21]:
 
 ### (11)
 
@@ -43,7 +51,7 @@ f\left(\frac{2x}{W}\right) = \frac{1}{2} \left\{
 \operatorname{erf} \left[ \frac{W}{2d_x} \left( 1 + \frac{2x}{W} \right) \right] + \operatorname{erf} \left[ \frac{W}{2d_x} \left( 1 - \frac{2x}{W} \right) \right] \right\},
 $$
 
-$e$ e $o$ denotam, respectivamente, os raios extraordinário e ordinário; $x$ e $y$ são as coordenadas de um ponto no substrato; $W$ é a largura inicial da faixa de Ti; $d_x$ e $d_y$ são, respectivamente, a largura e a profundidade de difusão; $n_b$ é o índice de refração do substrato; e $\Delta n_s$ representa a variação do índice superficial com o comprimento de onda.
+os subscritos $e$ e $o$ denotam, respectivamente, os ramos extraordinário e ordinário; $x$ e $y$ são as coordenadas de um ponto no substrato; $W$ é a largura inicial da faixa de Ti; $d_x$ e $d_y$ são, respectivamente, a largura e a profundidade de difusão; $n_b$ é o índice de refração do substrato; e $\Delta n_s$ representa a variação do índice superficial com o comprimento de onda. A função $\operatorname{erf}$ denota a função erro.
 
 Além disso, $\Delta n_{s_{e,o}}$ é dado em termos de $H$ (a espessura inicial da faixa de Ti) e de alguns parâmetros de ajuste [22]:
 
@@ -108,3 +116,11 @@ A Fig. 7 mostra o índice efetivo calculado para o modo $E^x_{11}$ e os tamanhos
 ![Figura 7 - Índice efetivo e dimensões do modo em função da largura inicial da faixa de Ti.](img/fig_7.png)
 
 **Fig. 7.** Índice efetivo ($n_{\mathrm{eff}}$) e tamanhos de modo $W_x$ e $W_y$ em função da largura inicial da faixa de Ti.
+
+Uma observação importante para a implementação é que as expressões (11)-(13) usam a mesma forma funcional para os dois ramos, mas com parâmetros distintos. Em um código futuro, isso sugere instanciar explicitamente os conjuntos extraordinário e ordinário de parâmetros, evitando tratar $d_x$, $d_y$, $n_b$ e $\Delta n_s$ como quantidades únicas quando o caso físico exigir diferenciação entre os ramos.
+
+Os exemplos desta seção correspondem aos **Casos 5 e 6** sintetizados em [09_resumo_dos_casos_de_teste.md](09_resumo_dos_casos_de_teste.md) e fecham a sequência de validação física do artigo antes das conclusões em [07_conclusoes.md](07_conclusoes.md).
+
+---
+
+**Navegação:** [Anterior](05_guia_de_onda_de_canal_difuso_isotropico.md) | [Índice](README.md) | [Próximo](07_conclusoes.md)

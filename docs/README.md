@@ -1,224 +1,121 @@
 # Documentação do artigo
 
-Esta pasta reúne a tradução técnica, a organização conceitual e a leitura estruturada do artigo que servirá de base para a reprodução computacional do problema em C++.
+Esta pasta reúne a tradução técnica, a organização conceitual e a leitura estruturada do artigo que servirá de base para a futura reprodução computacional do problema em C++.
 
-O objetivo desta documentação não é apenas “guardar a tradução”, mas transformar o artigo em um material de estudo e implementação. Por isso, os arquivos foram organizados em ordem lógica, acompanhando a progressão do próprio texto: apresentação do trabalho, motivação, formulação matemática, casos de validação, conclusões e referências.
+O objetivo desta documentação não é apenas armazenar uma tradução do texto original, mas transformá-lo em material de estudo, implementação e validação. Por isso, os arquivos foram organizados para acompanhar a progressão do artigo e, ao mesmo tempo, facilitar sua conversão em tarefas de modelagem numérica.
 
-Outro ponto importante é que esta documentação já passou por uma revisão manual das equações e da notação. Isso é especialmente relevante porque o PDF original possui trechos escaneados com pequenas degradações visuais, o que pode introduzir ambiguidades em índices, sobrescritos, subscritos e alguns coeficientes. Nesta pasta, o conteúdo já foi ajustado a partir de uma leitura crítica do artigo, buscando fidelidade matemática e clareza editorial.
+No estado atual do repositório, `docs/` é a parte central do projeto. Ainda não há uma implementação em C++, então esta pasta também funciona como especificação técnica inicial do que deverá ser codificado, validado e automatizado nas próximas etapas.
 
-## Propósito desta pasta
+## O que esta pasta entrega
 
-Esta pasta foi criada para cumprir várias funções ao mesmo tempo:
+- tradução técnica com preservação da estrutura do artigo;
+- consolidação da notação matemática e dos principais parâmetros;
+- separação clara entre formulação, casos de validação, conclusões e referências;
+- apoio para transformar o artigo em um plano de implementação progressiva;
+- registro editorial de trechos que merecem conferência manual no PDF original.
 
-- servir como tradução comentada do artigo;
-- preservar a estrutura lógica do texto original;
-- facilitar a leitura técnica antes da implementação;
-- apoiar a modelagem do código em C++;
-- ajudar na preparação de tarefas objetivas para o Codex;
-- registrar, de maneira rastreável, a interpretação adotada para cada equação, parâmetro e caso numérico.
+## Ordem recomendada de leitura
 
-Em outras palavras, esta pasta funciona como a ponte entre o artigo científico e o repositório computacional.
+1. [00_titulo_autores_resumo_descritores.md](00_titulo_autores_resumo_descritores.md)  
+   Fixar o escopo do trabalho, os autores, o resumo e os termos de indexação.
+2. [01_introducao.md](01_introducao.md)  
+   Entender a motivação tecnológica e o posicionamento da formulação na literatura.
+3. [02_formulacao_por_elementos_finitos.md](02_formulacao_por_elementos_finitos.md)  
+   Estudar a equação escalar, a discretização FEM e o problema generalizado de autovalor.
+4. [03_guia_de_onda_de_canal_isotropico_homogeneo.md](03_guia_de_onda_de_canal_isotropico_homogeneo.md)  
+   Ler o primeiro caso de validação, homogêneo e mais simples.
+5. [04_guia_de_onda_planar_difuso_isotropico.md](04_guia_de_onda_planar_difuso_isotropico.md)  
+   Introduzir índice espacialmente variável em geometria planar.
+6. [05_guia_de_onda_de_canal_difuso_isotropico.md](05_guia_de_onda_de_canal_difuso_isotropico.md)  
+   Avançar para os dois casos isotrópicos de canal.
+7. [06_guia_de_onda_de_canal_difuso_anisotropico.md](06_guia_de_onda_de_canal_difuso_anisotropico.md)  
+   Estudar os casos anisotrópicos em $LiNbO_3$.
+8. [07_conclusoes.md](07_conclusoes.md)  
+   Fechar a leitura com a avaliação comparativa dos autores.
+9. [08_referencias.md](08_referencias.md)  
+   Consultar as fontes citadas no artigo.
+10. [09_resumo_dos_casos_de_teste.md](09_resumo_dos_casos_de_teste.md)  
+    Usar o mapa consolidado dos casos como apoio direto para planejamento da implementação.
 
-## Como ler esta documentação
+## Papel de cada arquivo
 
-Embora os arquivos possam ser consultados isoladamente, o ideal é seguir a ordem numérica. O encadeamento foi pensado para que a compreensão física e matemática amadureça gradualmente.
+### Abertura e contexto
 
-A sequência recomendada é:
+- [00_titulo_autores_resumo_descritores.md](00_titulo_autores_resumo_descritores.md) define o escopo científico do trabalho logo na entrada.
+- [01_introducao.md](01_introducao.md) explica por que comparar métodos para guias difusos isotrópicos e anisotrópicos é relevante.
 
-1. entender o escopo do artigo;
-2. compreender a motivação da formulação;
-3. estudar a formulação por elementos finitos;
-4. analisar os casos isotrópicos mais simples;
-5. avançar para os casos difusos mais complexos;
-6. chegar aos exemplos anisotrópicos em LiNbO$_3$;
-7. fechar com as conclusões e referências.
+### Núcleo matemático
 
-Esse fluxo também será útil na hora de implementar o projeto em etapas, pois a ordem dos documentos sugere uma ordem natural de validação numérica.
+- [02_formulacao_por_elementos_finitos.md](02_formulacao_por_elementos_finitos.md) concentra a formulação escalar para modos $E^x$, a decomposição matricial e as aproximações nodais.
 
-## Estrutura dos arquivos
+### Casos de validação
 
-### `00_...md`
+- [03_guia_de_onda_de_canal_isotropico_homogeneo.md](03_guia_de_onda_de_canal_isotropico_homogeneo.md) é o teste mais simples do solver.
+- [04_guia_de_onda_planar_difuso_isotropico.md](04_guia_de_onda_planar_difuso_isotropico.md) introduz variação espacial explícita de índice em um caso planar.
+- [05_guia_de_onda_de_canal_difuso_isotropico.md](05_guia_de_onda_de_canal_difuso_isotropico.md) reúne dois casos isotrópicos de canal, um com perfil circular e outro Gaussian-Gaussian.
+- [06_guia_de_onda_de_canal_difuso_anisotropico.md](06_guia_de_onda_de_canal_difuso_anisotropico.md) apresenta os casos APE e Ti:$LiNbO_3$, que são os mais ricos do ponto de vista material.
 
-Arquivo de abertura do artigo.
+### Fechamento e apoio
 
-Contém o título, autores, afiliações, resumo, termos de indexação e nota editorial associada ao manuscrito. Este arquivo é importante porque define, logo no início, o escopo exato do trabalho: uma formulação escalar por elementos finitos para modos $E^x$ em guias de onda ópticos anisotrópicos com perfil arbitrário de índice.
+- [07_conclusoes.md](07_conclusoes.md) resume a confiabilidade da formulação e a cautela necessária perto do corte.
+- [08_referencias.md](08_referencias.md) preserva a base bibliográfica citada no artigo.
+- [09_resumo_dos_casos_de_teste.md](09_resumo_dos_casos_de_teste.md) reorganiza os seis casos como sequência de implementação e validação.
 
-Do ponto de vista do projeto, este arquivo é útil para responder perguntas como:
+## Convenções editoriais e de notação
 
-- o que exatamente o artigo pretende resolver;
-- qual é a natureza da formulação;
-- que tipo de meio físico está sendo tratado;
-- quais comparações e validações os autores prometem apresentar.
+- A notação $E^x$ foi preservada como no artigo e identifica a variável modal tratada na formulação escalar.
+- A relação entre constante de propagação e índice efetivo é mantida como
 
-Em um repositório técnico, essa abertura também ajuda a orientar o texto do `README.md` principal da raiz do projeto.
+$$
+n_{\mathrm{eff}} = \frac{\beta}{k_0}.
+$$
 
-### `01_...md`
+- Os termos “guia planar”, “guia de canal”, “índice efetivo”, “constante de propagação”, “difusão” e “anisotropia” foram mantidos de forma consistente ao longo dos arquivos.
+- Em prosa, foi padronizado o uso de $LiNbO_3$ e Ti:$LiNbO_3$.
+- As equações em destaque foram mantidas em blocos `$$...$$` para preservar legibilidade e fidelidade ao artigo.
+- As referências a figuras e equações foram preservadas no estilo do texto técnico original, com acréscimos apenas quando isso melhorou a navegação entre arquivos.
 
-Introdução.
+## Como esta pasta conversa com a futura implementação em C++
 
-Este arquivo apresenta o contexto tecnológico e científico do artigo. Ele mostra por que guias de onda ópticos difusos são importantes, por que diferentes métodos numéricos aparecem na literatura e por que a comparação entre formulações é necessária.
+Mesmo antes de existir código, já é possível enxergar uma decomposição natural do projeto:
 
-Aqui também aparece uma informação essencial para o planejamento do código: os autores deixam claro que este trabalho é uma extensão de uma formulação anterior, agora adaptada para três índices de refração variando continuamente nas direções transversais.
+- um núcleo FEM para malha, elementos triangulares, funções de forma e montagem matricial;
+- uma camada de materiais para perfis isotrópicos, APE e Ti:$LiNbO_3$;
+- uma camada de resolução modal para o problema generalizado de autovalor;
+- uma camada de pós-processamento para curvas de dispersão, índices efetivos e tamanhos modais;
+- uma rotina de validação caso a caso, alinhada com as figuras do artigo.
 
-Esse detalhe tem impacto direto na implementação, porque mostra que o problema não é apenas um caso homogêneo simples. Há variação espacial do material, e isso precisa aparecer explicitamente tanto na modelagem dos coeficientes quanto na montagem das matrizes.
+Em termos de sequência de trabalho, a ordem mais segura continua sendo:
 
-### `02_...md`
+1. validar o caso homogêneo;
+2. introduzir perfis isotrópicos difusos;
+3. atacar os casos de canal;
+4. só então avançar para anisotropia em $LiNbO_3$.
 
-Formulação por elementos finitos.
+## Pontos que exigem atenção especial
 
-Este é o núcleo matemático do artigo e, provavelmente, o arquivo mais importante desta pasta para a futura implementação em C++.
+Alguns trechos já estão suficientemente claros para leitura e planejamento, mas merecem conferência manual quando a implementação começar:
 
-Nele aparecem:
+- o termo $[F_4]$ em [02_formulacao_por_elementos_finitos.md](02_formulacao_por_elementos_finitos.md), por ser uma parte delicada da transcrição matemática;
+- a definição explícita de $f(x,y)$ no caso Gaussian-Gaussian de [05_guia_de_onda_de_canal_difuso_isotropico.md](05_guia_de_onda_de_canal_difuso_isotropico.md);
+- a parametrização geométrica associada à dimensão $b$ na normalização do Caso 1;
+- a diferença entre cristal com corte em $x$ e em $c$ na comparação do caso Ti:$LiNbO_3$.
 
-- o tensor de permissividade relativa diagonal;
-- a equação escalar de onda para os modos $E^x$;
-- a passagem para o problema generalizado de autovalor;
-- a decomposição da matriz global em blocos como $[F_1]$, $[F_2]$, $[F_3]$ e $[F_4]$;
-- a aproximação nodal da variável de estado e dos índices de refração;
-- a interpretação dos parâmetros ligados a regiões difusas ou homogêneas.
+Nenhum desses pontos foi apagado ou “corrigido por suposição”. Quando houve ambiguidade relevante, a documentação foi mantida e acompanhada de observação editorial discreta.
 
-Este documento deve ser lido com calma, porque dele sairão várias decisões de projeto, por exemplo:
+## Uso prático desta pasta
 
-- como representar a malha triangular;
-- como organizar as funções de forma;
-- como armazenar coeficientes geométricos;
-- como avaliar $n_x$, $n_z$ e suas derivadas;
-- como montar cada termo da formulação;
-- como estruturar o problema de autovalor para obter $n_{\mathrm{eff}}$.
+Uma forma produtiva de usar `docs/` durante o desenvolvimento é:
 
-Em termos práticos, este é o arquivo que mais conversa com `src/`.
+1. escolher um caso em [09_resumo_dos_casos_de_teste.md](09_resumo_dos_casos_de_teste.md);
+2. abrir o arquivo da seção correspondente;
+3. recuperar equações, parâmetros, normalizações e figura-alvo;
+4. traduzir isso para um caso de entrada do código;
+5. resolver o problema modal;
+6. comparar o resultado com a literatura e registrar diferenças perto do corte.
 
-### `03_...md`
+Esse fluxo ajuda a manter o projeto rastreável, incremental e cientificamente verificável.
 
-Guia de onda de canal isotrópico homogêneo.
+---
 
-Este é um primeiro caso de teste, mais simples, usado para verificar se a formulação reproduz corretamente resultados conhecidos em um cenário menos complicado.
-
-Esse arquivo é muito valioso do ponto de vista de desenvolvimento, porque sugere um excelente primeiro marco de validação do código. Antes de enfrentar perfis espaciais mais sofisticados, é recomendável que o solver consiga reproduzir adequadamente esse exemplo.
-
-Ele também mostra um padrão importante do artigo: cada caso não é apenas descrito matematicamente, mas comparado com resultados da literatura. Isso indica que o repositório deve nascer já com vocação para validação, e não apenas para “rodar”.
-
-### `04_...md`
-
-Guia de onda planar difuso isotrópico.
-
-Aqui já aparece um perfil de índice com dependência espacial explícita, no caso um perfil exponencial. Este arquivo marca uma transição importante entre um problema homogêneo e um problema realmente difuso.
-
-Ele é particularmente interessante porque permite testar:
-
-- avaliação espacial do índice;
-- consistência da montagem com coeficientes variáveis;
-- cálculo dos modos de menor ordem;
-- comparação de curvas de dispersão.
-
-Em uma estratégia de implementação progressiva, este caso é ideal como segunda validação.
-
-### `05_...md`
-
-Guia de onda de canal difuso isotrópico.
-
-Este arquivo aprofunda o estudo de guias isotrópicos com perfis mais elaborados. Aqui aparecem a geometria do núcleo retangular, a difusão circular, expressões por partes para a quantidade $L$, além de comparações com vários métodos numéricos da literatura.
-
-Do ponto de vista computacional, este arquivo é muito rico porque exige mais do que uma simples montagem padrão. Ele envolve:
-
-- interpretação geométrica do domínio;
-- descrição de perfis espaciais definidos por regiões;
-- análise perto da condição de corte;
-- comparação entre diferentes formulações.
-
-Além disso, a presença de mais de uma figura e de comparações múltiplas sugere que o repositório deverá ter scripts de pós-processamento bem organizados, capazes de gerar gráficos consistentes e comparáveis.
-
-### `06_...md`
-
-Guia de onda de canal difuso anisotrópico.
-
-Este é um dos arquivos mais importantes da pasta, pois nele aparecem os exemplos anisotrópicos que justificam o foco principal do artigo.
-
-A seção é dividida em duas partes:
-
-- guia APE em LiNbO$_3$;
-- guia Ti-difundido em LiNbO$_3$.
-
-Esses exemplos introduzem modelos de índice mais ricos, parâmetros físicos de difusão, relações com concentração de prótons, funções com erro (`erf`) e coeficientes ajustados experimentalmente.
-
-Para a futura implementação, este arquivo sinaliza que o projeto precisará de uma camada de modelagem de materiais relativamente bem organizada. Não será suficiente apenas montar elementos; será necessário também modelar perfis materiais de forma limpa, rastreável e reutilizável.
-
-Em termos de arquitetura do código, este arquivo conversa fortemente com algo como:
-
-- `src/materials/`
-- `src/fem/`
-- `scripts/plot_*.py`
-- `out/caseXX/...`
-
-### `07_...md`
-
-Conclusões.
-
-Este arquivo fecha o artigo e ajuda a entender o que os autores consideram como principal contribuição do trabalho.
-
-As conclusões reforçam alguns pontos centrais:
-
-- a formulação escalar apresentou boa confiabilidade;
-- a região de corte continua sendo delicada para comparação entre métodos;
-- formulações escalares podem ser vantajosas em memória e tempo de CPU;
-- há interesse prático em desenvolver ferramentas confiáveis para análise de dispositivos ópticos integrados.
-
-Para o repositório, isso significa que o projeto não deve ser visto apenas como um exercício acadêmico de transcrição de equações. Há um objetivo computacional claro: criar uma ferramenta sólida, validável e eficiente.
-
-### `08_...md`
-
-Referências.
-
-Este arquivo reúne as referências bibliográficas do artigo. Ele é importante por duas razões.
-
-A primeira é histórica e técnica: permite rastrear a base teórica e numérica da formulação. A segunda é prática: aponta materiais fundamentais para aprofundar pontos específicos durante a implementação.
-
-Por exemplo, as referências podem ajudar a investigar:
-
-- formulações escalares e vetoriais relacionadas;
-- trabalhos clássicos de FEM em guias de onda ópticos;
-- literatura sobre LiNbO$_3$ e perfis difusos;
-- métodos de comparação para curvas de dispersão;
-- bases conceituais para futuras extensões do projeto.
-
-Em uma etapa posterior, este arquivo também pode servir de ponto de partida para uma seção bibliográfica mais ampla no `README.md` principal da raiz do repositório.
-
-## Relação desta pasta com o restante do repositório
-
-Embora esta pasta seja documental, ela foi pensada para dialogar diretamente com a estrutura computacional do projeto.
-
-De forma ideal:
-
-- `docs/` explica o problema;
-- `src/` implementa o problema;
-- `scripts/` automatiza compilação, execução, pós-processamento e validação;
-- `out/` armazena os resultados gerados.
-
-Essa separação é importante porque evita misturar teoria, código-fonte, automação e resultados num mesmo lugar. Além disso, ajuda bastante quando o projeto crescer.
-
-## Como esta documentação ajudará na implementação
-
-Esta pasta permitirá transformar o artigo em tarefas objetivas. Por exemplo:
-
-- extrair a formulação fraca e a forma matricial;
-- identificar quais coeficientes dependem da geometria;
-- definir funções para perfis isotrópicos e anisotrópicos;
-- construir casos de teste progressivos;
-- comparar resultados numéricos com as figuras do artigo;
-- documentar hipóteses, simplificações e escolhas de implementação.
-
-Em outras palavras, antes de codificar, esta pasta ajuda a responder corretamente à pergunta mais importante de todas: **o que exatamente deve ser implementado?**
-
-## Sugestão de uso prático
-
-Uma boa forma de usar esta pasta no desenvolvimento é a seguinte:
-
-1. ler o arquivo correspondente ao caso que se deseja implementar;
-2. extrair as equações, parâmetros e dados de validação;
-3. transformar isso em uma tarefa objetiva para o código;
-4. implementar em `src/`;
-5. criar um script `.sh` em `scripts/` para compilar e executar;
-6. salvar os resultados em `out/`;
-7. comparar com o comportamento descrito no documento da seção correspondente.
-
-Esse ciclo tende a deixar o projeto mais limpo, verificável e reproduzível.
+**Navegação:** [Próximo](00_titulo_autores_resumo_descritores.md)

@@ -1,5 +1,7 @@
 # Referências
 
+As referências abaixo foram preservadas na numeração citada ao longo das seções [01](01_introducao.md) a [07](07_conclusoes.md). Para leitura orientada desta pasta, vale notar três grupos especialmente relevantes: [6]-[8] para os casos isotrópicos clássicos, [9], [20]-[22] para os exemplos anisotrópicos em $LiNbO_3$, e [14]-[18] para o pano de fundo da formulação por elementos finitos.
+
 [1] D. Rafizadeh, S. T. Ho, “Numerical analysis of vectorial wave propagation in waveguides with arbitrary refractive index profiles,” *Optics Communications*, vol. 141, pp. 17-20, 1997.
 
 [2] H. Renner, “Cutoff Frequencies in Diffusion-Type Power-Law Profile Waveguides,” *IEEE Journal of Quantum Electronics*, vol. 33, no. 5, pp. 724-730, 1997.
@@ -20,7 +22,7 @@
 
 [10] F. A. Katsriku, B. M. A. Rahman and K. T. V. Grattan, “Finite Element Analysis of Diffused Anisotropic Optical Waveguides,” *Journal of Lightwave Technology*, vol. 14, no. 5, pp. 780-786, 1996.
 
-[11] U. Hempelmann, H. Herrmann, G. Mrozynski, V. Reimann, and W. Sohler, “Integrated Optical Proton Exchanged TM-Pass Polarizers in LiNbO$_3$: Modelling and Experimental Performance,” *Journal of Lightwave Technology*, vol. 13, no. 8, pp. 1750-1759, 1995.
+[11] U. Hempelmann, H. Herrmann, G. Mrozynski, V. Reimann, and W. Sohler, “Integrated Optical Proton Exchanged TM-Pass Polarizers in $LiNbO_3$: Modelling and Experimental Performance,” *Journal of Lightwave Technology*, vol. 13, no. 8, pp. 1750-1759, 1995.
 
 [12] C. L. S. S. Sobrinho, A. J. Giarola, “Analysis of a Dielectric Channel Waveguide Diffused in an Anisotropic Substrate with a Gaussian-Gaussian Index of Refraction Profile Using the Finite-Difference Method,” *SBMO International Microwave Conference*, Brazil, Aug., 1993, pp. 557-562.
 
@@ -38,8 +40,12 @@
 
 [19] E. A. J. Marcatili, “Dielectric rectangular waveguide and directional coupler for integrated optics,” *Bell Syst. Tech. J.*, vol. 48, pp. 2071-2102, 1969.
 
-[20] S. T. Vohra, A. R. Michelson and S. E. Asher, “Diffusion characteristics and waveguiding properties of proton-exchanged and annealed LiNbO$_3$ channel waveguides,” *J. Applied Physics*, vol. 66, no. 11, pp. 5161-5173, 1989.
+[20] S. T. Vohra, A. R. Michelson and S. E. Asher, “Diffusion characteristics and waveguiding properties of proton-exchanged and annealed $LiNbO_3$ channel waveguides,” *J. Applied Physics*, vol. 66, no. 11, pp. 5161-5173, 1989.
 
-[21] D. Zhang, C. Chen, J. Li, G. Ding, X. Chen, and Y. Cui, “A Theoretical Study of a Ti-Diffused Er:LiNbO$_3$ Waveguide Laser,” *IEEE Journal of Quantum Electronics*, vol. 32, no. 10, pp. 1833-1838, 1996.
+[21] D. Zhang, C. Chen, J. Li, G. Ding, X. Chen, and Y. Cui, “A Theoretical Study of a Ti-Diffused Er:$LiNbO_3$ Waveguide Laser,” *IEEE Journal of Quantum Electronics*, vol. 32, no. 10, pp. 1833-1838, 1996.
 
-[22] S. Fouchet, A. Carenco, C. Daguet, R. Guglielmi, L. Riviere, “Wavelength Dispersion of Ti Induced Refractive Index Change in LiNbO$_3$ as a Function of Diffusion Parameters,” *Journal of Lightwave Technology*, vol. LT-5, no. 5, pp. 700-708, 1987.
+[22] S. Fouchet, A. Carenco, C. Daguet, R. Guglielmi, L. Riviere, “Wavelength Dispersion of Ti Induced Refractive Index Change in $LiNbO_3$ as a Function of Diffusion Parameters,” *Journal of Lightwave Technology*, vol. LT-5, no. 5, pp. 700-708, 1987.
+
+---
+
+**Navegação:** [Anterior](07_conclusoes.md) | [Índice](README.md) | [Próximo](09_resumo_dos_casos_de_teste.md)
