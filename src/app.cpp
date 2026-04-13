@@ -136,6 +136,13 @@ std::string format_gradient(const Gradient2D& gradient) {
     return stream.str();
 }
 
+std::string mode_index_to_label(std::size_t one_based_index) {
+    if (one_based_index >= 1 && one_based_index <= 3) {
+        return "TE" + std::to_string(one_based_index - 1);
+    }
+    return "mode_" + std::to_string(one_based_index);
+}
+
 std::string format_map_value_range(const std::map<int, double>& values_by_node_id) {
     if (values_by_node_id.empty()) {
         return "min=0.000000, max=0.000000";
@@ -303,12 +310,15 @@ std::string build_neff_csv(const GeneralizedEigenSolution& solution) {
 }
 
 std::string build_dispersion_curve_points_csv(const GeneralizedEigenSolution& solution,
-                                              double wavelength_um) {
+                                              double diffusion_depth,
+                                              double k0) {
     std::ostringstream stream;
-    stream << "wavelength_um,mode_index,eigenvalue_n_eff_squared,neff,beta,status\n";
+    stream << "b,k0,k0_b,mode_index,mode_label,eigenvalue_n_eff_squared,neff,beta,status\n";
     for (std::size_t i = 0; i < solution.eigenpairs.size(); ++i) {
         const GeneralizedEigenpair& eigenpair = solution.eigenpairs[i];
-        stream << format_number(wavelength_um) << "," << (i + 1) << ","
+        stream << format_number(diffusion_depth) << "," << format_number(k0) << ","
+               << format_number(k0 * diffusion_depth) << "," << (i + 1) << ","
+               << mode_index_to_label(i + 1) << ","
                << format_number(eigenpair.eigenvalue) << ",";
         if (eigenpair.has_neff) {
             stream << format_number(eigenpair.n_eff) << ","
@@ -475,6 +485,9 @@ int run_application(int argc, char** argv) {
         run_summary << "boundary_condition: " << config.boundary_condition << "\n";
         run_summary << "requested_modes: " << config.requested_modes << "\n";
         run_summary << "wavelength_um: " << format_number(config.wavelength_um) << "\n";
+        run_summary << "k0_used: " << format_number(k0) << "\n";
+        run_summary << "k0_b_used: "
+                    << format_number(k0 * std::max(config.diffusion_depth, 0.0)) << "\n";
         run_summary << "mesh_format: " << mesh.format << "\n";
         run_summary << "mesh_dimension: " << mesh.dimension << "\n";
         run_summary << "mesh_node_count: " << mesh.nodes.size() << "\n";
@@ -483,7 +496,6 @@ int run_application(int argc, char** argv) {
         run_summary << "global_assembly_available: yes\n";
         run_summary << "eigensolver_available: yes\n";
         run_summary << "local_formulation_model: " << local_material.model_label << "\n";
-        run_summary << "k0_used: " << format_number(k0) << "\n";
         append_quadrature_rule_summary(run_summary, local_options.quadrature_rule);
         run_summary << "first_element_id: " << first_element.element_id << "\n";
         run_summary << "first_element_global_node_ids: ["
@@ -695,10 +707,16 @@ int run_application(int argc, char** argv) {
                         << "\n";
                 summary << "requested_modes: " << config.requested_modes << "\n";
                 summary << "computed_modes: " << eigen_solution.eigenpairs.size() << "\n";
+                summary << "k0_used: " << format_number(k0) << "\n";
+                summary << "k0_b_used: "
+                        << format_number(k0 * std::max(config.diffusion_depth, 0.0))
+                        << "\n";
                 for (std::size_t i = 0; i < eigen_solution.eigenpairs.size(); ++i) {
                     const GeneralizedEigenpair& eigenpair = eigen_solution.eigenpairs[i];
                     summary << "mode_" << (i + 1) << "_eigenvalue_n_eff_squared: "
                             << format_number(eigenpair.eigenvalue) << "\n";
+                    summary << "mode_" << (i + 1)
+                            << "_label: " << mode_index_to_label(i + 1) << "\n";
                     if (eigenpair.has_neff) {
                         summary << "mode_" << (i + 1) << "_n_eff: "
                                 << format_number(eigenpair.n_eff) << "\n";
@@ -727,7 +745,7 @@ int run_application(int argc, char** argv) {
         write_text_file(results_dir / "neff.csv", build_neff_csv(eigen_solution));
         write_text_file(results_dir / "dispersion_curve_points.csv",
                         build_dispersion_curve_points_csv(
-                            eigen_solution, config.wavelength_um));
+                            eigen_solution, config.diffusion_depth, k0));
         write_text_file(results_dir / "modal_summary.csv",
                         build_neff_csv(eigen_solution));
 

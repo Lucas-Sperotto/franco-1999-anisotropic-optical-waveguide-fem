@@ -22,8 +22,8 @@ class StudyDefinition:
     reference_plot: bool
 
 
-FULL_DIFFUSION_DEPTHS = [0.25, 0.50, 0.75, 1.00, 1.25, 1.50, 2.00, 2.50, 3.00]
-SMOKE_DIFFUSION_DEPTHS = [0.50, 1.00, 2.00]
+FULL_K0_B_VALUES = [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0]
+SMOKE_K0_B_VALUES = [20.0, 80.0, 160.0]
 
 STUDIES = [
     StudyDefinition("y4_coarse", "meshes/planar_strip_y4_coarse.mesh", "coarse", 4.0, 1.0, False),
@@ -105,6 +105,12 @@ def load_yaml_like_case(case_path: Path) -> dict[str, str]:
 
 def format_depth_label(depth: float) -> str:
     return f"{depth:.2f}".replace(".", "p")
+
+
+def compute_k0(wavelength_um: float) -> float:
+    if wavelength_um <= 0.0:
+        raise ValueError("The sweep requires a positive solver.wavelength_um")
+    return 2.0 * 3.14159265358979323846 / wavelength_um
 
 
 def write_case_file(
@@ -200,7 +206,9 @@ def main() -> None:
     points_dir.mkdir(parents=True, exist_ok=True)
 
     template_entries = load_yaml_like_case(case_template)
-    diffusion_depths = SMOKE_DIFFUSION_DEPTHS if args.smoke else FULL_DIFFUSION_DEPTHS
+    wavelength_um = float(template_entries["solver.wavelength_um"])
+    k0 = compute_k0(wavelength_um)
+    k0_b_values = SMOKE_K0_B_VALUES if args.smoke else FULL_K0_B_VALUES
 
     study_manifest_path = sweep_root / "study_manifest.csv"
     point_manifest_path = sweep_root / "point_manifest.csv"
@@ -237,7 +245,11 @@ def main() -> None:
                 "mesh_label",
                 "truncation_ymax",
                 "dy",
+                "b",
                 "diffusion_depth",
+                "wavelength_um",
+                "k0",
+                "k0_b",
                 "case_file",
                 "output_dir",
                 "run_label",
@@ -245,7 +257,8 @@ def main() -> None:
         )
 
         for study in STUDIES:
-            for diffusion_depth in diffusion_depths:
+            for k0_b in k0_b_values:
+                diffusion_depth = k0_b / k0
                 depth_label = format_depth_label(diffusion_depth)
                 case_file = generated_cases_dir / f"{study.study_id}_b_{depth_label}.yaml"
                 point_output_dir = points_dir / study.study_id / f"b_{depth_label}"
@@ -259,6 +272,10 @@ def main() -> None:
                         f"{study.truncation_ymax:.6f}",
                         f"{study.dy:.6f}",
                         f"{diffusion_depth:.6f}",
+                        f"{diffusion_depth:.6f}",
+                        f"{wavelength_um:.6f}",
+                        f"{k0:.6f}",
+                        f"{k0_b:.6f}",
                         case_file,
                         point_output_dir,
                         run_label,
@@ -272,11 +289,14 @@ def main() -> None:
                 f"case_template: {case_template}",
                 f"solver: {solver_path}",
                 f"smoke_mode: {'yes' if args.smoke else 'no'}",
-                "parameter: diffusion_depth",
-                "diffusion_depths: "
-                + ", ".join(f"{value:.2f}" for value in diffusion_depths),
+                "parameter: k0_b",
+                "derived_parameter: diffusion_depth_b = k0_b / k0",
+                f"wavelength_um: {wavelength_um:.6f}",
+                f"k0: {k0:.6f}",
+                "k0_b_values: " + ", ".join(f"{value:.2f}" for value in k0_b_values),
                 f"study_count: {len(STUDIES)}",
                 "reference_plot_study: y6_fine",
+                "comparison_status: preliminary_alignment_with_figure_2_axes_only",
             ]
         )
         + "\n",
