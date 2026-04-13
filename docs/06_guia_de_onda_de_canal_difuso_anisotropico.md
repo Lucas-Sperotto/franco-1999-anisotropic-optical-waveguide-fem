@@ -50,7 +50,7 @@ Além disso, $\Delta n_{s_{e,o}}$ é dado em termos de $H$ (a espessura inicial 
 ### (13)
 
 $$
-\Delta n_{s_{e,o}}(\lambda) = \left[ B_0(\lambda) + B_1(\lambda)\frac{H}{d_{y_{e,o}}} \right] \left( \frac{H}{d_{y_{e,o}}} \right)^{\alpha_{e,o}}, \tag{12}
+\Delta n_{s_{e,o}}(\lambda) = \left[ B_0(\lambda) + B_1(\lambda)\frac{H}{d_{y_{e,o}}} \right] \left( \frac{H}{d_{y_{e,o}}} \right)^{\alpha_{e,o}},
 $$
 
 com
