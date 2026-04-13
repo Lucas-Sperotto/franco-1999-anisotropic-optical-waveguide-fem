@@ -1,0 +1,13 @@
+case:
+  id: case00_smoke
+  description: "Smoke test for repository infrastructure and I/O flow"
+
+mesh:
+  file: ../meshes/placeholder_triangle.mesh
+
+solver:
+  requested_modes: 1
+  wavelength_um: 1.55
+
+output:
+  tag: smoke

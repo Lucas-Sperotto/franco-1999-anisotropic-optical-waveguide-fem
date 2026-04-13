@@ -114,6 +114,7 @@ Cada pasta de saída deve buscar conter:
 - snapshot das entradas;
 - log de execução;
 - autovalores;
+- autovetores;
 - índices efetivos;
 - dados de modos;
 - metadados da malha;

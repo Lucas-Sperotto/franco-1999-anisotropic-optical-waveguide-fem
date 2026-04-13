@@ -39,3 +39,10 @@
 
 # debug information files
 *.dwo
+
+# CMake build tree
+build/
+
+# Generated execution outputs
+out/*
+!out/README.md

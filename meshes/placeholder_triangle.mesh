@@ -1,0 +1,12 @@
+# placeholder_triangle.mesh
+# Mesh placeholder for the repository infrastructure smoke test.
+# The definitive mesh format will be decided later.
+
+format: placeholder-v1
+dimension: 2
+nodes:
+  1: [0.0, 0.0]
+  2: [1.0, 0.0]
+  3: [0.0, 1.0]
+elements:
+  1: [1, 2, 3]
