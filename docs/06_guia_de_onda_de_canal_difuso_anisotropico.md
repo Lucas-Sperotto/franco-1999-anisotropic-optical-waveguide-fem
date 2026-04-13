@@ -2,45 +2,52 @@
 
 ## A. Guia de onda obtido por troca protônica com recozimento
 
-Guias de onda ópticos de LiNbO$_3$ obtidos por troca protônica com recozimento (*annealed proton-exchanged* — APE) possuem a propriedade de polarização única, porque o processo APE altera apenas o índice de refração extraordinário.
+Guias de onda ópticos de $LiNbO_3$ obtidos por troca protônica com recozimento (*annealed proton-exchanged* — APE) possuem a propriedade de polarização única, porque o processo APE altera apenas o índice de refração extraordinário.
 
 A variação do índice após o processo de troca protônica (PE) é aproximada por um índice inicial em degrau ($\Delta n_{\mathrm{PE}} = 0.12$). Subsequentemente, o processo de recozimento foi simulado por uma equação de difusão anisotrópica linear bidimensional resolvida pelo método dos elementos finitos.
 
 A variação do índice extraordinário foi relacionada à concentração de prótons no substrato da seguinte forma [20]:
 
+### (10)
+
 $$
 n_e(C) = n_{es} + \Delta n_e \left[1 - \exp(-11C)\right],
-\tag{8}
 $$
 
-onde $C$ é a concentração normalizada de prótons ($0 < C < 1$), $n_{es}$ é o índice de refração extraordinário do LiNbO$_3$ e $\Delta n_e$ é a variação máxima do índice de refração induzida pelo processo de troca protônica (PE).
+onde $C$ é a concentração normalizada de prótons ($0 < C < 1$), $n_{es}$ é o índice de refração extraordinário do $LiNbO_3$ e $\Delta n_e$ é a variação máxima do índice de refração induzida pelo processo de troca protônica (PE).
 
-A Fig. 6 mostra as curvas de dispersão para os quatro modos $E^x$ de menor ordem em um guia APE de LiNbO$_3$ com corte em $x$. Os tempos de PE e de recozimento são, respectivamente, quinze minutos a $190^\circ$C e quatro horas a $360^\circ$C.
+A Fig. 6 mostra as curvas de dispersão para os quatro modos $E^x$ de menor ordem em um guia APE de $LiNbO_3$ com corte em $x$. Os tempos de PE e de recozimento são, respectivamente, quinze minutos a $190^\circ$C e quatro horas a $360^\circ$C.
 
 A dispersão do índice de refração não foi considerada neste exemplo. Uma análise detalhada para esse caso foi apresentada em um trabalho anterior [9].
 
 ![Figura 6 - Curvas de dispersão para os quatro modos Ex de menor ordem em guia APE x-cut de LiNbO3.](img/fig_6.png)
 
-**Fig. 6.** Curvas de dispersão para os quatro modos $E^x$ de menor ordem em guia de onda APE de LiNbO$_3$ com corte em $x$. Para $360^\circ$C, as constantes de difusão do recozimento são $ D_a(x\text{-cut}) = 0.92\ \mu\text{m}^2/\text{h} $, $ D_a(z\text{-cut}) = 0.77\ \mu\text{m}^2/\text{h} $, e $ \lambda_0 = 0.6328\ \mu\text{m} $.
+**Fig. 6.** Curvas de dispersão para os quatro modos $E^x$ de menor ordem em guia de onda APE de $LiNbO_3$ com corte em $x$. Para $360^\circ$C, as constantes de difusão do recozimento são $ D_a(x\text{-cut}) = 0.92\ \mu\text{m}^2/\text{h} $, $ D_a(z\text{-cut}) = 0.77\ \mu\text{m}^2/\text{h} $, e $ \lambda_0 = 0.6328\ \mu\text{m} $.
 
 ## B. Guia de onda Ti-difundido em LiNbO$_3$
 
 Para guias de onda de canal Ti:LiNbO$_3$, o índice de refração na região difundida segue [21]:
 
+### (11)
+
 $$
-n_{e,o}^2(x,y,\lambda) = n_{b_{e,o}}^2 + \left[ \left(n_{b_{e,o}} + \Delta n_{s_{e,o}}\right)^2 - n_{b_{e,o}}^2 \right] \exp\left(-\frac{y^2}{d_y^2}\right) f\left(\frac{2x}{W}\right) \tag{10}
+n_{e,o}^2(x,y,\lambda) = n_{b_{e,o}}^2 + \left[ \left(n_{b_{e,o}} + \Delta n_{s_{e,o}}\right)^2 - n_{b_{e,o}}^2 \right] \exp\left(-\frac{y^2}{d_y^2}\right) f\left(\frac{2x}{W}\right)
 $$
 
 onde
 
+### (12)
+
 $$
 f\left(\frac{2x}{W}\right) = \frac{1}{2} \left\{
-\operatorname{erf} \left[ \frac{W}{2d_x} \left( 1 + \frac{2x}{W} \right) \right] + \operatorname{erf} \left[ \frac{W}{2d_x} \left( 1 - \frac{2x}{W} \right) \right] \right\}, \tag{11}
+\operatorname{erf} \left[ \frac{W}{2d_x} \left( 1 + \frac{2x}{W} \right) \right] + \operatorname{erf} \left[ \frac{W}{2d_x} \left( 1 - \frac{2x}{W} \right) \right] \right\},
 $$
 
 $e$ e $o$ denotam, respectivamente, os raios extraordinário e ordinário; $x$ e $y$ são as coordenadas de um ponto no substrato; $W$ é a largura inicial da faixa de Ti; $d_x$ e $d_y$ são, respectivamente, a largura e a profundidade de difusão; $n_b$ é o índice de refração do substrato; e $\Delta n_s$ representa a variação do índice superficial com o comprimento de onda.
 
 Além disso, $\Delta n_{s_{e,o}}$ é dado em termos de $H$ (a espessura inicial da faixa de Ti) e de alguns parâmetros de ajuste [22]:
+
+### (13)
 
 $$
 \Delta n_{s_{e,o}}(\lambda) = \left[ B_0(\lambda) + B_1(\lambda)\frac{H}{d_{y_{e,o}}} \right] \left( \frac{H}{d_{y_{e,o}}} \right)^{\alpha_{e,o}}, \tag{12}

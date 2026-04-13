@@ -3,7 +3,7 @@
 Para dielétricos anisotrópicos nos quais o tensor de permissividade relativa é diagonal,
 
 $$
-\bar{\bar{\varepsilon}}_r =
+\bar{\varepsilon}_r =
 \begin{bmatrix}
 n_x^2(x,y) & 0 & 0 \\
 0 & n_y^2(x,y) & 0 \\
@@ -29,14 +29,16 @@ $$
 
 onde $n_{\mathrm{eff}} = \beta / k_0$ é o índice efetivo, e $k_0$ é o número de onda no espaço livre. As matrizes $[F]$ e $[M]$ para elementos finitos triangulares são:
 
+## (3a)
+
 $$
 [M] = 2 A k_0^2 \int_{\zeta_1}\int_{\zeta_2} n_z^2 \{N\}^T \{N\}\, d\zeta_1\, d\zeta_2,
-\tag{3a}
 $$
+
+## (3b)
 
 $$
 [F] = [F_1] - [F_2] - [F_3] + [F_4],
-\tag{3b}
 $$
 
 onde:
@@ -69,23 +71,26 @@ Excetuando-se os termos que contêm as derivadas parciais do índice de refraç�
 
 A variável de estado $E_x$ e os índices de refração são modelados usando a aproximação nodal:
 
+## (4)
+
 $$
 E_x = \{N\}\{E_x\}^T,
-\tag{4}
 $$
 
 e
+
+## (5)
 
 $$
 n_k^2 = \{N\}\{n_k^2\}^T, \qquad k = x, z ,
-\tag{5}
 $$
 
 e
 
+## (6)
+
 $$
 g_z^2 = \frac{1}{n_z^2} = \{N\}\{g_z^2\}^T.
-\tag{6}
 $$
 
 Todas as integrais em (3) foram previamente calculadas por integração analítica, utilizando a mesma abordagem descrita em [18].
