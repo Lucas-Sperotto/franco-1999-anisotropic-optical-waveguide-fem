@@ -1,7 +1,5 @@
 #include "waveguide_solver/global_assembly.hpp"
 
-#include "waveguide_solver/material.hpp"
-
 #include <algorithm>
 #include <map>
 #include <set>
@@ -46,20 +44,18 @@ std::vector<int> detect_boundary_node_ids(const Mesh& mesh) {
     return {boundary_node_ids.begin(), boundary_node_ids.end()};
 }
 
-HomogeneousIsotropicGlobalAssemblyResult assemble_global_homogeneous_isotropic_system(
+GlobalAssemblyResult assemble_global_system(
     const Mesh& mesh,
-    double refractive_index,
+    const GlobalNodalMaterialFields& material_fields,
     const ArticleLocalAssemblyOptions& local_options) {
     const std::size_t node_count = mesh.nodes.size();
-    const double refractive_index_squared = refractive_index * refractive_index;
 
-    HomogeneousIsotropicGlobalAssemblyResult result;
+    GlobalAssemblyResult result;
+    result.material_fields = material_fields;
     result.node_count = node_count;
     result.element_count = mesh.triangles.size();
-    result.refractive_index = refractive_index;
-    result.refractive_index_squared = refractive_index_squared;
     result.k0 = local_options.k0;
-    result.local_material_model = "homogeneous_isotropic_constant_coefficients";
+    result.local_material_model = material_fields.model_label;
 
     result.node_order.reserve(mesh.nodes.size());
     for (std::size_t i = 0; i < mesh.nodes.size(); ++i) {
@@ -73,12 +69,12 @@ HomogeneousIsotropicGlobalAssemblyResult assemble_global_homogeneous_isotropic_s
     for (const TriangleElement& triangle : mesh.triangles) {
         const LinearTriangleP1Element element = mesh.make_p1_element(triangle);
         const ArticleLocalMaterialCoefficients material =
-            make_homogeneous_isotropic_local_material(element, refractive_index_squared);
+            make_element_material_from_global_fields(element, material_fields);
         const ArticleLocalMatrices local_matrices =
             assemble_article_local_matrices(element, material, local_options);
 
-        // The global matrices follow the article eigenproblem [F]{E} = n_eff^2 [M]{E}
-        // by summing each element contribution into the mesh-level operators.
+        // The global operators still follow the article eigenproblem [F]{E} = n_eff^2 [M]{E},
+        // but the element contributions now inherit nodally interpolated material fields.
         for (std::size_t a = 0; a < triangle.node_ids.size(); ++a) {
             const std::size_t global_row =
                 result.node_id_to_dof.at(triangle.node_ids[a]);
@@ -119,6 +115,26 @@ HomogeneousIsotropicGlobalAssemblyResult assemble_global_homogeneous_isotropic_s
         result.matrices.F_full, result.boundary_condition.free_dof_indices);
 
     return result;
+}
+
+GlobalAssemblyResult assemble_global_homogeneous_isotropic_system(
+    const Mesh& mesh,
+    double refractive_index,
+    const ArticleLocalAssemblyOptions& local_options) {
+    return assemble_global_system(
+        mesh,
+        make_homogeneous_isotropic_global_material(mesh, refractive_index),
+        local_options);
+}
+
+GlobalAssemblyResult assemble_global_planar_diffuse_isotropic_system(
+    const Mesh& mesh,
+    const PlanarDiffuseIsotropicProfile& profile,
+    const ArticleLocalAssemblyOptions& local_options) {
+    return assemble_global_system(
+        mesh,
+        make_planar_diffuse_isotropic_global_material(mesh, profile),
+        local_options);
 }
 
 }  // namespace waveguide

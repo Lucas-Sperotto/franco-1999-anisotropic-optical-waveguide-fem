@@ -19,6 +19,6 @@ Convenção adotada nesta fase:
 - `inputs/`: snapshot do arquivo de entrada usado na execução;
 - `logs/`: stdout/stderr e logs auxiliares de execução;
 - `meta/`: resumo da execução, paths resolvidos, metadados do caso e informações da montagem global;
-- `results/`: artefatos numéricos e arquivos produzidos pelo solver, incluindo auditoria local do primeiro elemento, matrizes globais, autovalores e `neff.csv`.
+- `results/`: artefatos numéricos e arquivos produzidos pelo solver, incluindo auditoria local do primeiro elemento, parâmetros do perfil material, campos nodais de coeficientes, matrizes globais resumidas, autovalores, `neff.csv` e pontos para curva de dispersão.
 
-O executável atual gera uma execução demonstrável com leitura de caso, leitura de malha mínima, construção do elemento triangular P1, interpolação local dos coeficientes `nx2`, `nz2` e `gz2`, decomposição local dos termos `M`, `F1`, `F2`, `F3`, `F4` e `F` por quadratura no triângulo de referência, montagem global mínima do caso homogêneo isotrópico, eliminação de Dirichlet em nós de fronteira e solução densa do autoproblema generalizado reduzido.
+O executável atual gera execuções demonstráveis para o caso homogêneo isotrópico constante e para o primeiro caso global com perfil planar difuso isotrópico. Em ambos, o fluxo cobre leitura de caso, leitura de malha, interpolação local dos coeficientes `nx2`, `nz2` e `gz2`, decomposição local dos termos `M`, `F1`, `F2`, `F3`, `F4` e `F`, montagem global densa, eliminação de Dirichlet em nós de fronteira e solução do autoproblema generalizado reduzido.

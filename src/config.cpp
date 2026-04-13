@@ -128,10 +128,12 @@ void validate_schema_version(int schema_version) {
 }
 
 void validate_material_model(const std::string& material_model) {
-    if (material_model != "homogeneous_isotropic_constant") {
+    if (material_model != "homogeneous_isotropic_constant" &&
+        material_model != "planar_diffuse_isotropic_exponential") {
         throw std::runtime_error(
             "Unsupported material.model '" + material_model +
-            "'. Only homogeneous_isotropic_constant is available at this stage");
+            "'. Supported models: homogeneous_isotropic_constant, "
+            "planar_diffuse_isotropic_exponential");
     }
 }
 
@@ -206,8 +208,19 @@ CaseConfig load_case_config(const std::filesystem::path& case_file) {
     config.mesh_file = require_entry(config, "mesh.file");
     config.material_model = require_entry(config, "material.model");
     validate_material_model(config.material_model);
-    config.refractive_index =
-        parse_required_positive_double(config, "material.refractive_index");
+
+    if (config.material_model == "homogeneous_isotropic_constant") {
+        config.refractive_index =
+            parse_required_positive_double(config, "material.refractive_index");
+    } else if (config.material_model == "planar_diffuse_isotropic_exponential") {
+        config.background_index =
+            parse_required_positive_double(config, "material.background_index");
+        config.delta_index =
+            parse_required_nonnegative_double(config, "material.delta_index");
+        config.diffusion_depth =
+            parse_required_positive_double(config, "material.diffusion_depth");
+    }
+
     config.boundary_condition =
         get_optional_entry(config, "boundary.condition",
                            "dirichlet_zero_on_boundary");

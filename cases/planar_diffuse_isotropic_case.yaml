@@ -1,0 +1,24 @@
+schema_version: 1
+
+case:
+  id: case02_planar_diffuse_isotropic
+  description: "Planar diffuse isotropic guide with exponential profile depending on y"
+
+mesh:
+  file: ../meshes/planar_strip_3x9.mesh
+
+material:
+  model: planar_diffuse_isotropic_exponential
+  background_index: 2.20
+  delta_index: 0.01
+  diffusion_depth: 1.00
+
+boundary:
+  condition: dirichlet_zero_on_boundary
+
+solver:
+  requested_modes: 3
+  wavelength_um: 1.55
+
+output:
+  tag: planar_diffuse_isotropic

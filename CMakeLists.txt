@@ -15,6 +15,7 @@ add_library(waveguide_core
     src/global_assembly.cpp
     src/local_assembly.cpp
     src/material.cpp
+    src/material_profile.cpp
     src/mesh.cpp
     src/quadrature.cpp
 )
@@ -77,6 +78,18 @@ if(BUILD_TESTING)
             FIXTURES_SETUP waveguide_solver_smoke_fixture
     )
 
+    add_test(NAME waveguide_solver_planar_smoke
+        COMMAND waveguide_solver
+            --case ${CMAKE_SOURCE_DIR}/cases/planar_diffuse_isotropic_case.yaml
+            --output ${CMAKE_BINARY_DIR}/test_output/planar
+            --run-label ctest_planar
+    )
+
+    set_tests_properties(waveguide_solver_planar_smoke
+        PROPERTIES
+            FIXTURES_SETUP waveguide_solver_planar_fixture
+    )
+
     add_test(NAME waveguide_geometry_tests
         COMMAND waveguide_geometry_tests
     )
@@ -94,5 +107,16 @@ if(BUILD_TESTING)
     set_tests_properties(waveguide_solver_smoke_artifacts
         PROPERTIES
             FIXTURES_REQUIRED waveguide_solver_smoke_fixture
+    )
+
+    add_test(NAME waveguide_solver_planar_smoke_artifacts
+        COMMAND ${CMAKE_COMMAND}
+            -DSMOKE_OUTPUT_DIR=${CMAKE_BINARY_DIR}/test_output/planar
+            -P ${CMAKE_SOURCE_DIR}/tests/check_smoke_outputs.cmake
+    )
+
+    set_tests_properties(waveguide_solver_planar_smoke_artifacts
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_solver_planar_fixture
     )
 endif()

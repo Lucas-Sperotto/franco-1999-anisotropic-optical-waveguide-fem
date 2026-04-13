@@ -13,6 +13,9 @@ struct CaseConfig {
     std::string mesh_file;
     std::string material_model;
     double refractive_index = 0.0;
+    double background_index = 0.0;
+    double delta_index = 0.0;
+    double diffusion_depth = 0.0;
     std::string boundary_condition;
     int requested_modes = 1;
     double wavelength_um = 0.0;

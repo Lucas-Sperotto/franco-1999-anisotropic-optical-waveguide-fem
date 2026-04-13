@@ -8,6 +8,7 @@
 #include "waveguide_solver/mesh.hpp"
 
 #include <array>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -132,6 +133,25 @@ std::string format_gradient(const Gradient2D& gradient) {
     std::ostringstream stream;
     stream << "[" << format_number(gradient[0]) << ", " << format_number(gradient[1])
            << "]";
+    return stream.str();
+}
+
+std::string format_map_value_range(const std::map<int, double>& values_by_node_id) {
+    if (values_by_node_id.empty()) {
+        return "min=0.000000, max=0.000000";
+    }
+
+    double min_value = values_by_node_id.begin()->second;
+    double max_value = values_by_node_id.begin()->second;
+    for (const auto& [node_id, value] : values_by_node_id) {
+        (void)node_id;
+        min_value = std::min(min_value, value);
+        max_value = std::max(max_value, value);
+    }
+
+    std::ostringstream stream;
+    stream << "min=" << format_number(min_value)
+           << ", max=" << format_number(max_value);
     return stream.str();
 }
 
@@ -282,6 +302,43 @@ std::string build_neff_csv(const GeneralizedEigenSolution& solution) {
     return stream.str();
 }
 
+std::string build_dispersion_curve_points_csv(const GeneralizedEigenSolution& solution,
+                                              double wavelength_um) {
+    std::ostringstream stream;
+    stream << "wavelength_um,mode_index,eigenvalue_n_eff_squared,neff,beta,status\n";
+    for (std::size_t i = 0; i < solution.eigenpairs.size(); ++i) {
+        const GeneralizedEigenpair& eigenpair = solution.eigenpairs[i];
+        stream << format_number(wavelength_um) << "," << (i + 1) << ","
+               << format_number(eigenpair.eigenvalue) << ",";
+        if (eigenpair.has_neff) {
+            stream << format_number(eigenpair.n_eff) << ","
+                   << format_number(eigenpair.beta) << ",ok\n";
+        } else {
+            stream << ",,not_applicable\n";
+        }
+    }
+    return stream.str();
+}
+
+std::string build_nodal_material_fields_csv(const Mesh& mesh,
+                                            const GlobalNodalMaterialFields& material_fields) {
+    std::ostringstream stream;
+    stream << "node_id,x,y,nx2,nz2,gz2,refractive_index\n";
+    for (const MeshNode& node : mesh.nodes) {
+        const double nx2 =
+            get_global_material_value(material_fields.nx2_by_node_id, node.id, "nx2");
+        const double nz2 =
+            get_global_material_value(material_fields.nz2_by_node_id, node.id, "nz2");
+        const double gz2 =
+            get_global_material_value(material_fields.gz2_by_node_id, node.id, "gz2");
+        stream << node.id << "," << format_number(node.point.x) << ","
+               << format_number(node.point.y) << "," << format_number(nx2) << ","
+               << format_number(nz2) << "," << format_number(gz2) << ","
+               << format_number(std::sqrt(std::max(nx2, 0.0))) << "\n";
+    }
+    return stream.str();
+}
+
 }  // namespace
 
 int run_application(int argc, char** argv) {
@@ -314,9 +371,39 @@ int run_application(int argc, char** argv) {
         const ArticleLocalAssemblyOptions local_options =
             make_default_article_local_assembly_options(k0);
 
+        GlobalAssemblyResult global_assembly;
+        std::ostringstream material_profile_summary;
+
+        if (config.material_model == "homogeneous_isotropic_constant") {
+            global_assembly = assemble_global_homogeneous_isotropic_system(
+                mesh, config.refractive_index, local_options);
+            material_profile_summary
+                << "material_model: homogeneous_isotropic_constant\n"
+                << "refractive_index: " << format_number(config.refractive_index) << "\n"
+                << "refractive_index_squared: "
+                << format_number(config.refractive_index * config.refractive_index) << "\n";
+        } else if (config.material_model == "planar_diffuse_isotropic_exponential") {
+            const PlanarDiffuseIsotropicProfile profile{
+                config.background_index,
+                config.delta_index,
+                config.diffusion_depth,
+            };
+            global_assembly = assemble_global_planar_diffuse_isotropic_system(
+                mesh, profile, local_options);
+            material_profile_summary
+                << "material_model: planar_diffuse_isotropic_exponential\n"
+                << "background_index: " << format_number(profile.background_index) << "\n"
+                << "delta_index: " << format_number(profile.delta_index) << "\n"
+                << "diffusion_depth: " << format_number(profile.diffusion_depth) << "\n"
+                << "profile_formula: n(y) = n_background + delta_n * exp(-|y|/b)\n";
+        } else {
+            throw std::runtime_error("Unsupported material.model at runtime: " +
+                                     config.material_model);
+        }
+
         const ArticleLocalMaterialCoefficients local_material =
-            make_homogeneous_isotropic_local_material(
-                first_element, config.refractive_index * config.refractive_index);
+            make_element_material_from_global_fields(
+                first_element, global_assembly.material_fields);
         const ArticleLocalMatrices article_local =
             assemble_article_local_matrices(first_element, local_material, local_options);
         const bool constant_reduction_available =
@@ -327,11 +414,8 @@ int run_application(int argc, char** argv) {
                       first_element, local_material, local_options)
                 : ArticleLocalMatrices{};
 
-        const HomogeneousIsotropicGlobalAssemblyResult global_assembly =
-            assemble_global_homogeneous_isotropic_system(
-                mesh, config.refractive_index, local_options);
         const GeneralizedEigenSolution eigen_solution =
-            solve_symmetric_generalized_eigenproblem(
+            solve_generalized_eigenproblem_dense(
                 global_assembly.matrices.F_reduced,
                 global_assembly.matrices.M_reduced,
                 k0,
@@ -360,9 +444,10 @@ int run_application(int argc, char** argv) {
             std::filesystem::copy_options::overwrite_existing);
 
         std::ostringstream run_summary;
-        run_summary << "status: global_homogeneous_isotropic_ready\n";
-        run_summary << "partial_scope_warning: This stage assembles and solves only the "
-                       "homogeneous isotropic constant-coefficient case.\n";
+        run_summary << "status: global_dense_material_cases_ready\n";
+        run_summary << "partial_scope_warning: This stage assembles and solves the "
+                       "homogeneous isotropic constant case and the first planar diffuse "
+                       "isotropic variable-coefficient case.\n";
         run_summary << "schema_version: " << config.schema_version << "\n";
         run_summary << "case_id: " << config.case_id << "\n";
         run_summary << "description: " << config.description << "\n";
@@ -377,8 +462,16 @@ int run_application(int argc, char** argv) {
         run_summary << "run_label: " << run_label << "\n";
         run_summary << "output_tag: " << config.output_tag << "\n";
         run_summary << "material_model: " << config.material_model << "\n";
-        run_summary << "refractive_index: " << format_number(config.refractive_index)
-                    << "\n";
+        if (config.material_model == "homogeneous_isotropic_constant") {
+            run_summary << "refractive_index: " << format_number(config.refractive_index)
+                        << "\n";
+        } else {
+            run_summary << "background_index: " << format_number(config.background_index)
+                        << "\n";
+            run_summary << "delta_index: " << format_number(config.delta_index) << "\n";
+            run_summary << "diffusion_depth: " << format_number(config.diffusion_depth)
+                        << "\n";
+        }
         run_summary << "boundary_condition: " << config.boundary_condition << "\n";
         run_summary << "requested_modes: " << config.requested_modes << "\n";
         run_summary << "wavelength_um: " << format_number(config.wavelength_um) << "\n";
@@ -425,6 +518,18 @@ int run_application(int argc, char** argv) {
                     << "\n";
         run_summary << "free_dof_count: "
                     << global_assembly.boundary_condition.free_dof_indices.size() << "\n";
+        run_summary << "nx2_node_range: "
+                    << format_map_value_range(
+                           global_assembly.material_fields.nx2_by_node_id)
+                    << "\n";
+        run_summary << "nz2_node_range: "
+                    << format_map_value_range(
+                           global_assembly.material_fields.nz2_by_node_id)
+                    << "\n";
+        run_summary << "gz2_node_range: "
+                    << format_map_value_range(
+                           global_assembly.material_fields.gz2_by_node_id)
+                    << "\n";
         run_summary << "M_local_flags: " << format_local_matrix_flags(article_local.M_local)
                     << "\n";
         run_summary << "F_local_flags: " << format_local_matrix_flags(article_local.F_local)
@@ -439,6 +544,10 @@ int run_application(int argc, char** argv) {
         run_summary << "F_reduced_flags: "
                     << format_dense_matrix_flags(global_assembly.matrices.F_reduced)
                     << "\n";
+        run_summary << "eigensolver_label: " << eigen_solution.solver_label << "\n";
+        run_summary << "transformed_matrix_is_symmetric: "
+                    << bool_to_text(eigen_solution.transformed_matrix_is_symmetric)
+                    << "\n";
         run_summary << "eigenpair_count: " << eigen_solution.eigenpairs.size() << "\n";
         if (!eigen_solution.eigenpairs.empty()) {
             run_summary << "leading_eigenvalue_n_eff_squared: "
@@ -452,6 +561,8 @@ int run_application(int argc, char** argv) {
         }
 
         write_text_file(meta_dir / "run_summary.txt", run_summary.str());
+        write_text_file(results_dir / "material_profile_summary.txt",
+                        material_profile_summary.str());
 
         write_text_file(
             results_dir / "geometry_summary.txt",
@@ -483,9 +594,16 @@ int run_application(int argc, char** argv) {
                 audit << "integration_note: The local matrices are evaluated with "
                          "reference-triangle quadrature rather than the article's "
                          "analytic integration tables.\n";
-                audit << "reduction_note: In this homogeneous isotropic run, F4 remains "
-                         "zero and the quadrature result is compared against the closed-form "
-                         "constant reduction.\n";
+                if (constant_reduction_available) {
+                    audit << "reduction_note: In this element, F4 remains zero and the "
+                             "quadrature result is compared against the closed-form constant "
+                             "reduction.\n";
+                } else {
+                    audit << "transition_note: This element inherits nodally varying "
+                             "isotropic coefficients from the global profile, so the local "
+                             "assembly uses the general quadrature path without the constant "
+                             "reduction shortcut.\n";
+                }
                 append_quadrature_rule_summary(audit, local_options.quadrature_rule);
                 append_quadrature_point_listing(audit, local_options.quadrature_rule);
                 audit << "delta_x: " << bool_to_text(local_material.delta_x) << "\n";
@@ -525,10 +643,13 @@ int run_application(int argc, char** argv) {
             results_dir / "global_assembly_summary.txt",
             [&]() {
                 std::ostringstream summary;
-                summary << "assembly_mode: global_homogeneous_isotropic_constant\n";
+                summary << "assembly_mode: " << config.material_model << "\n";
                 summary << "equation_note: The global matrices satisfy [F]{E} = "
                            "n_eff^2 [M]{E} after assembling the element matrices from the "
                            "article-oriented local formulation.\n";
+                summary << "transition_note: The homogeneous constant case and the planar "
+                           "diffuse isotropic case share the same global assembly path; only "
+                           "the nodal material fields change before element assembly.\n";
                 summary << "node_count: " << global_assembly.node_count << "\n";
                 summary << "element_count: " << global_assembly.element_count << "\n";
                 summary << "full_matrix_dimension: "
@@ -560,6 +681,18 @@ int run_application(int argc, char** argv) {
                 summary << "transformed_eigen_matrix_flags: "
                         << format_dense_matrix_flags(eigen_solution.transformed_matrix)
                         << "\n";
+                summary << "eigensolver_label: " << eigen_solution.solver_label << "\n";
+                summary << "transformed_matrix_is_symmetric: "
+                        << bool_to_text(eigen_solution.transformed_matrix_is_symmetric)
+                        << "\n";
+                summary << "nx2_node_range: "
+                        << format_map_value_range(
+                               global_assembly.material_fields.nx2_by_node_id)
+                        << "\n";
+                summary << "nz2_node_range: "
+                        << format_map_value_range(
+                               global_assembly.material_fields.nz2_by_node_id)
+                        << "\n";
                 summary << "requested_modes: " << config.requested_modes << "\n";
                 summary << "computed_modes: " << eigen_solution.eigenpairs.size() << "\n";
                 for (std::size_t i = 0; i < eigen_solution.eigenpairs.size(); ++i) {
@@ -586,9 +719,15 @@ int run_application(int argc, char** argv) {
                         format_dense_matrix_csv(global_assembly.matrices.F_reduced));
         write_text_file(results_dir / "transformed_eigen_matrix.csv",
                         format_dense_matrix_csv(eigen_solution.transformed_matrix));
+        write_text_file(results_dir / "nodal_material_fields.csv",
+                        build_nodal_material_fields_csv(
+                            mesh, global_assembly.material_fields));
         write_text_file(results_dir / "eigenvalues.csv",
                         build_eigenvalues_csv(eigen_solution));
         write_text_file(results_dir / "neff.csv", build_neff_csv(eigen_solution));
+        write_text_file(results_dir / "dispersion_curve_points.csv",
+                        build_dispersion_curve_points_csv(
+                            eigen_solution, config.wavelength_um));
         write_text_file(results_dir / "modal_summary.csv",
                         build_neff_csv(eigen_solution));
 
@@ -596,7 +735,7 @@ int run_application(int argc, char** argv) {
             results_dir / "README.txt",
             "This run validates local quadrature-based element matrices, global assembly,\n"
             "Dirichlet elimination on boundary nodes, and a dense generalized eigen solve\n"
-            "for the homogeneous isotropic constant-coefficient case.\n");
+            "for either the homogeneous isotropic constant case or the planar diffuse isotropic case.\n");
 
         std::ostringstream execution_log;
         execution_log << "waveguide_solver execution log\n";
@@ -606,6 +745,8 @@ int run_application(int argc, char** argv) {
         execution_log << "element_count=" << mesh.triangles.size() << "\n";
         execution_log << "boundary_condition="
                       << global_assembly.boundary_condition.label << "\n";
+        execution_log << "material_model=" << config.material_model << "\n";
+        execution_log << "eigensolver_label=" << eigen_solution.solver_label << "\n";
         execution_log << "constrained_nodes="
                       << format_generic_vector(
                              global_assembly.boundary_condition.constrained_node_ids)
@@ -627,7 +768,7 @@ int run_application(int argc, char** argv) {
         write_text_file(logs_dir / "solver_execution.log", execution_log.str());
         write_text_file(logs_dir / "solver.stdout.log", execution_log.str());
 
-        std::cout << "waveguide_solver: homogeneous-isotropic global solve completed\n";
+        std::cout << "waveguide_solver: dense global solve completed\n";
         std::cout << "  case id       : " << config.case_id << "\n";
         std::cout << "  run label     : " << run_label << "\n";
         std::cout << "  mesh file     : " << mesh_file.string() << "\n";
@@ -644,8 +785,9 @@ int run_application(int argc, char** argv) {
                 std::cout << "not_applicable\n";
             }
         }
+        std::cout << "  material      : " << config.material_model << "\n";
         std::cout << "  output folder : " << output_dir.string() << "\n";
-        std::cout << "  note          : only the homogeneous isotropic constant case is active\n";
+        std::cout << "  note          : dense global solver active for constant and planar diffuse isotropic cases\n";
 
         return 0;
     } catch (const std::exception& error) {
