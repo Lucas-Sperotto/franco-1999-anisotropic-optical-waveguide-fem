@@ -91,6 +91,18 @@ if(BUILD_TESTING)
             FIXTURES_SETUP waveguide_solver_planar_fixture
     )
 
+    add_test(NAME waveguide_solver_case1_smoke
+        COMMAND waveguide_solver
+            --case ${CMAKE_SOURCE_DIR}/cases/homogeneous_channel_isotropic_case.yaml
+            --output ${CMAKE_BINARY_DIR}/test_output/case1
+            --run-label ctest_case1
+    )
+
+    set_tests_properties(waveguide_solver_case1_smoke
+        PROPERTIES
+            FIXTURES_SETUP waveguide_solver_case1_fixture
+    )
+
     add_test(NAME waveguide_geometry_tests
         COMMAND waveguide_geometry_tests
     )
@@ -119,6 +131,17 @@ if(BUILD_TESTING)
     set_tests_properties(waveguide_solver_planar_smoke_artifacts
         PROPERTIES
             FIXTURES_REQUIRED waveguide_solver_planar_fixture
+    )
+
+    add_test(NAME waveguide_solver_case1_smoke_artifacts
+        COMMAND ${CMAKE_COMMAND}
+            -DSMOKE_OUTPUT_DIR=${CMAKE_BINARY_DIR}/test_output/case1
+            -P ${CMAKE_SOURCE_DIR}/tests/check_smoke_outputs.cmake
+    )
+
+    set_tests_properties(waveguide_solver_case1_smoke_artifacts
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_solver_case1_fixture
     )
 
     add_test(NAME waveguide_planar_sweep_smoke
@@ -166,5 +189,52 @@ if(BUILD_TESTING)
     set_tests_properties(waveguide_planar_sweep_artifacts
         PROPERTIES
             FIXTURES_REQUIRED waveguide_planar_sweep_plotted_fixture
+    )
+
+    add_test(NAME waveguide_case1_sweep_smoke
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/run_case1_homogeneous_channel_sweep.py
+            --smoke
+            --output-root ${CMAKE_BINARY_DIR}/test_output/case1_sweep
+    )
+
+    set_tests_properties(waveguide_case1_sweep_smoke
+        PROPERTIES
+            FIXTURES_SETUP waveguide_case1_sweep_fixture
+    )
+
+    add_test(NAME waveguide_case1_sweep_consolidate
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/consolidate_case1_homogeneous_channel_sweep.py
+            --sweep-root ${CMAKE_BINARY_DIR}/test_output/case1_sweep
+    )
+
+    set_tests_properties(waveguide_case1_sweep_consolidate
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_case1_sweep_fixture
+            FIXTURES_SETUP waveguide_case1_sweep_consolidated_fixture
+    )
+
+    add_test(NAME waveguide_case1_sweep_plot
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/plot_case1_homogeneous_channel_sweep.py
+            --sweep-root ${CMAKE_BINARY_DIR}/test_output/case1_sweep
+    )
+
+    set_tests_properties(waveguide_case1_sweep_plot
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_case1_sweep_consolidated_fixture
+            FIXTURES_SETUP waveguide_case1_sweep_plotted_fixture
+    )
+
+    add_test(NAME waveguide_case1_sweep_artifacts
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/check_case1_sweep_outputs.py
+            ${CMAKE_BINARY_DIR}/test_output/case1_sweep
+    )
+
+    set_tests_properties(waveguide_case1_sweep_artifacts
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_case1_sweep_plotted_fixture
     )
 endif()

@@ -80,6 +80,19 @@ int parse_required_positive_int(const CaseConfig& config, const std::string& key
     return value;
 }
 
+double parse_required_double(const CaseConfig& config, const std::string& key) {
+    const std::string value = require_entry(config, key);
+    try {
+        return std::stod(value);
+    } catch (const std::invalid_argument&) {
+        throw std::runtime_error("Expected floating-point value for case entry: " +
+                                 key);
+    } catch (const std::out_of_range&) {
+        throw std::runtime_error("Floating-point value out of range for case entry: " +
+                                 key);
+    }
+}
+
 double parse_required_nonnegative_double(const CaseConfig& config,
                                          const std::string& key) {
     const std::string value = require_entry(config, key);
@@ -117,6 +130,49 @@ double parse_required_positive_double(const CaseConfig& config,
     }
 }
 
+double parse_optional_positive_double(const CaseConfig& config,
+                                      const std::string& key,
+                                      double fallback) {
+    const auto it = config.raw_entries.find(key);
+    if (it == config.raw_entries.end() || it->second.empty()) {
+        return fallback;
+    }
+
+    try {
+        const double parsed = std::stod(it->second);
+        if (parsed <= 0.0) {
+            throw std::runtime_error("Expected positive value for case entry: " + key);
+        }
+        return parsed;
+    } catch (const std::invalid_argument&) {
+        throw std::runtime_error("Expected floating-point value for case entry: " +
+                                 key);
+    } catch (const std::out_of_range&) {
+        throw std::runtime_error("Floating-point value out of range for case entry: " +
+                                 key);
+    }
+}
+
+bool parse_optional_bool(const CaseConfig& config,
+                         const std::string& key,
+                         bool fallback) {
+    const auto it = config.raw_entries.find(key);
+    if (it == config.raw_entries.end() || it->second.empty()) {
+        return fallback;
+    }
+
+    const std::string value = trim_copy(it->second);
+    if (value == "true" || value == "yes" || value == "on" || value == "1") {
+        return true;
+    }
+
+    if (value == "false" || value == "no" || value == "off" || value == "0") {
+        return false;
+    }
+
+    throw std::runtime_error("Expected boolean value for case entry: " + key);
+}
+
 void validate_schema_version(int schema_version) {
     constexpr int kSupportedSchemaVersion = 1;
     if (schema_version != kSupportedSchemaVersion) {
@@ -129,20 +185,26 @@ void validate_schema_version(int schema_version) {
 
 void validate_material_model(const std::string& material_model) {
     if (material_model != "homogeneous_isotropic_constant" &&
-        material_model != "planar_diffuse_isotropic_exponential") {
+        material_model != "planar_diffuse_isotropic_exponential" &&
+        material_model != "planar_diffuse_isotropic_surface_exponential" &&
+        material_model != "rectangular_channel_step_index") {
         throw std::runtime_error(
             "Unsupported material.model '" + material_model +
             "'. Supported models: homogeneous_isotropic_constant, "
-            "planar_diffuse_isotropic_exponential");
+            "planar_diffuse_isotropic_exponential, "
+            "planar_diffuse_isotropic_surface_exponential, "
+            "rectangular_channel_step_index");
     }
 }
 
 void validate_boundary_condition(const std::string& boundary_condition) {
     if (boundary_condition != "dirichlet_zero_on_boundary" &&
-        boundary_condition != "dirichlet_zero_on_boundary_nodes") {
+        boundary_condition != "dirichlet_zero_on_boundary_nodes" &&
+        boundary_condition != "dirichlet_zero_on_y_extrema") {
         throw std::runtime_error(
             "Unsupported boundary.condition '" + boundary_condition +
-            "'. Only dirichlet_zero_on_boundary is available at this stage");
+            "'. Supported boundary conditions: dirichlet_zero_on_boundary, "
+            "dirichlet_zero_on_boundary_nodes, dirichlet_zero_on_y_extrema");
     }
 }
 
@@ -212,13 +274,33 @@ CaseConfig load_case_config(const std::filesystem::path& case_file) {
     if (config.material_model == "homogeneous_isotropic_constant") {
         config.refractive_index =
             parse_required_positive_double(config, "material.refractive_index");
-    } else if (config.material_model == "planar_diffuse_isotropic_exponential") {
+    } else if (config.material_model == "planar_diffuse_isotropic_exponential" ||
+               config.material_model == "planar_diffuse_isotropic_surface_exponential") {
         config.background_index =
             parse_required_positive_double(config, "material.background_index");
+        config.cover_index = parse_optional_positive_double(
+            config, "material.cover_index", config.background_index);
         config.delta_index =
             parse_required_nonnegative_double(config, "material.delta_index");
         config.diffusion_depth =
             parse_required_positive_double(config, "material.diffusion_depth");
+        config.linearized_permittivity =
+            parse_optional_bool(config, "material.linearized_permittivity", false);
+    } else if (config.material_model == "rectangular_channel_step_index") {
+        config.cover_index =
+            parse_required_positive_double(config, "material.cover_index");
+        config.substrate_index =
+            parse_required_positive_double(config, "material.substrate_index");
+        config.core_index =
+            parse_required_positive_double(config, "material.core_index");
+        config.core_width =
+            parse_required_positive_double(config, "material.core_width");
+        config.core_height =
+            parse_required_positive_double(config, "material.core_height");
+        config.core_center_x =
+            parse_required_double(config, "material.core_center_x");
+        config.surface_y =
+            parse_required_double(config, "material.surface_y");
     }
 
     config.boundary_condition =
@@ -231,6 +313,8 @@ CaseConfig load_case_config(const std::filesystem::path& case_file) {
         parse_required_positive_int(config, "solver.requested_modes");
     config.wavelength_um =
         parse_required_nonnegative_double(config, "solver.wavelength_um");
+    config.planar_x_invariant_reduction =
+        parse_optional_bool(config, "solver.planar_x_invariant_reduction", false);
 
     return config;
 }

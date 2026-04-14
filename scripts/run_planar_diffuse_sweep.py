@@ -22,20 +22,35 @@ class StudyDefinition:
     reference_plot: bool
 
 
-FULL_K0_B_VALUES = [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0]
-SMOKE_K0_B_VALUES = [20.0, 80.0, 160.0]
+FULL_K0_B_VALUES = [5.0, 10.0, 15.0, 20.0, 30.0, 40.0, 50.0, 70.0, 90.0, 110.0, 150.0]
+SMOKE_K0_B_VALUES = [10.0, 40.0, 150.0]
 
-STUDIES = [
-    StudyDefinition("y4_coarse", "meshes/planar_strip_y4_coarse.mesh", "coarse", 4.0, 1.0, False),
-    StudyDefinition("y4_fine", "meshes/planar_strip_y4_fine.mesh", "fine", 4.0, 0.5, False),
-    StudyDefinition("y6_coarse", "meshes/planar_strip_y6_coarse.mesh", "coarse", 6.0, 1.0, False),
-    StudyDefinition("y6_fine", "meshes/planar_strip_y6_fine.mesh", "fine", 6.0, 0.5, True),
+FULL_STUDIES = [
+    StudyDefinition(
+        "d10_reference",
+        "meshes/planar_d10_a2b_reference.mesh",
+        "reference",
+        5.0,
+        0.03125,
+        True,
+    ),
+]
+
+SMOKE_STUDIES = [
+    StudyDefinition(
+        "d10_smoke",
+        "meshes/planar_d10_a2b_smoke.mesh",
+        "smoke",
+        5.0,
+        0.125,
+        True,
+    ),
 ]
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Execute a diffusion-depth sweep for the planar diffuse isotropic case."
+        description="Execute a k0*b sweep for the planar diffuse isotropic case."
     )
     parser.add_argument(
         "--case-template",
@@ -103,8 +118,8 @@ def load_yaml_like_case(case_path: Path) -> dict[str, str]:
     return raw_entries
 
 
-def format_depth_label(depth: float) -> str:
-    return f"{depth:.2f}".replace(".", "p")
+def format_value_label(value: float) -> str:
+    return f"{value:.2f}".replace(".", "p")
 
 
 def compute_k0(wavelength_um: float) -> float:
@@ -113,20 +128,30 @@ def compute_k0(wavelength_um: float) -> float:
     return 2.0 * 3.14159265358979323846 / wavelength_um
 
 
+def compute_wavelength_um(k0: float) -> float:
+    if k0 <= 0.0:
+        raise ValueError("The sweep requires a positive k0")
+    return 2.0 * 3.14159265358979323846 / k0
+
+
 def write_case_file(
     destination: Path,
     template_entries: dict[str, str],
     study: StudyDefinition,
     diffusion_depth: float,
+    wavelength_um: float,
+    k0_b: float,
     repo_root: Path,
 ) -> None:
-    case_id = f"case02_planar_diffuse_{study.study_id}_b_{format_depth_label(diffusion_depth)}"
+    case_id = (
+        f"case02_planar_diffuse_{study.study_id}_k0b_{format_value_label(k0_b)}"
+    )
     mesh_path = (repo_root / study.mesh_file).resolve()
     content = f"""schema_version: 1
 
 case:
   id: {case_id}
-  description: "Planar diffuse isotropic sweep point {study.study_id} with b={diffusion_depth:.2f}"
+  description: "Planar diffuse isotropic sweep point {study.study_id} with assumed d={diffusion_depth:.2f} and k0*d={k0_b:.2f}"
 
 mesh:
   file: {mesh_path}
@@ -134,15 +159,18 @@ mesh:
 material:
   model: {template_entries['material.model']}
   background_index: {template_entries['material.background_index']}
+  cover_index: {template_entries.get('material.cover_index', template_entries['material.background_index'])}
   delta_index: {template_entries['material.delta_index']}
   diffusion_depth: {diffusion_depth:.6f}
+  linearized_permittivity: {template_entries.get('material.linearized_permittivity', 'false')}
 
 boundary:
   condition: {template_entries.get('boundary.condition', 'dirichlet_zero_on_boundary')}
 
 solver:
   requested_modes: {template_entries['solver.requested_modes']}
-  wavelength_um: {template_entries['solver.wavelength_um']}
+  wavelength_um: {wavelength_um:.12f}
+  planar_x_invariant_reduction: {template_entries.get('solver.planar_x_invariant_reduction', 'false')}
 
 output:
   tag: planar_diffuse_sweep
@@ -201,14 +229,20 @@ def main() -> None:
     sweep_root.mkdir(parents=True, exist_ok=True)
 
     generated_cases_dir = sweep_root / "generated_cases"
+    solver_cases_dir = repo_root / "build" / "generated_cases" / sweep_root.name
     points_dir = sweep_root / "points"
+    if solver_cases_dir.exists():
+        shutil.rmtree(solver_cases_dir)
     generated_cases_dir.mkdir(parents=True, exist_ok=True)
+    solver_cases_dir.mkdir(parents=True, exist_ok=True)
     points_dir.mkdir(parents=True, exist_ok=True)
 
     template_entries = load_yaml_like_case(case_template)
-    wavelength_um = float(template_entries["solver.wavelength_um"])
-    k0 = compute_k0(wavelength_um)
+    assumed_b = float(template_entries["material.diffusion_depth"])
+    if assumed_b <= 0.0:
+        raise ValueError("The planar sweep requires a positive material.diffusion_depth")
     k0_b_values = SMOKE_K0_B_VALUES if args.smoke else FULL_K0_B_VALUES
+    studies = SMOKE_STUDIES if args.smoke else FULL_STUDIES
 
     study_manifest_path = sweep_root / "study_manifest.csv"
     point_manifest_path = sweep_root / "point_manifest.csv"
@@ -225,7 +259,7 @@ def main() -> None:
                 "reference_plot",
             ]
         )
-        for study in STUDIES:
+        for study in studies:
             writer.writerow(
                 [
                     study.study_id,
@@ -247,23 +281,45 @@ def main() -> None:
                 "dy",
                 "b",
                 "diffusion_depth",
+                "cover_index",
+                "background_index",
+                "delta_index",
+                "linearized_permittivity",
                 "wavelength_um",
                 "k0",
                 "k0_b",
+                "planar_x_invariant_reduction",
                 "case_file",
                 "output_dir",
                 "run_label",
             ]
         )
 
-        for study in STUDIES:
+        for study in studies:
             for k0_b in k0_b_values:
-                diffusion_depth = k0_b / k0
-                depth_label = format_depth_label(diffusion_depth)
-                case_file = generated_cases_dir / f"{study.study_id}_b_{depth_label}.yaml"
-                point_output_dir = points_dir / study.study_id / f"b_{depth_label}"
-                run_label = f"{study.study_id}_b_{depth_label}"
-                write_case_file(case_file, template_entries, study, diffusion_depth, repo_root)
+                diffusion_depth = assumed_b
+                k0 = k0_b / diffusion_depth
+                wavelength_um = compute_wavelength_um(k0)
+                sweep_label = format_value_label(k0_b)
+                point_output_dir = points_dir / study.study_id / f"k0b_{sweep_label}"
+                point_output_dir.mkdir(parents=True, exist_ok=True)
+                case_file = (
+                    solver_cases_dir / f"{study.study_id}_k0b_{sweep_label}.yaml"
+                )
+                archived_case_file = (
+                    generated_cases_dir / f"{study.study_id}_k0b_{sweep_label}.yaml"
+                )
+                run_label = f"{study.study_id}_k0b_{sweep_label}"
+                write_case_file(
+                    case_file,
+                    template_entries,
+                    study,
+                    diffusion_depth,
+                    wavelength_um,
+                    k0_b,
+                    repo_root,
+                )
+                shutil.copyfile(case_file, archived_case_file)
                 run_solver(solver_path, case_file, point_output_dir, run_label)
                 writer.writerow(
                     [
@@ -273,9 +329,14 @@ def main() -> None:
                         f"{study.dy:.6f}",
                         f"{diffusion_depth:.6f}",
                         f"{diffusion_depth:.6f}",
+                        template_entries.get("material.cover_index", ""),
+                        template_entries["material.background_index"],
+                        template_entries["material.delta_index"],
+                        template_entries.get("material.linearized_permittivity", "false"),
                         f"{wavelength_um:.6f}",
                         f"{k0:.6f}",
                         f"{k0_b:.6f}",
+                        template_entries.get("solver.planar_x_invariant_reduction", "false"),
                         case_file,
                         point_output_dir,
                         run_label,
@@ -290,13 +351,23 @@ def main() -> None:
                 f"solver: {solver_path}",
                 f"smoke_mode: {'yes' if args.smoke else 'no'}",
                 "parameter: k0_b",
-                "derived_parameter: diffusion_depth_b = k0_b / k0",
-                f"wavelength_um: {wavelength_um:.6f}",
-                f"k0: {k0:.6f}",
+                f"assumed_diffusion_depth_b: {assumed_b:.6f}",
+                "derived_parameter: k0 = (k0_b / b_assumed) and wavelength = 2*pi / k0",
                 "k0_b_values: " + ", ".join(f"{value:.2f}" for value in k0_b_values),
-                f"study_count: {len(STUDIES)}",
-                "reference_plot_study: y6_fine",
-                "comparison_status: preliminary_alignment_with_figure_2_axes_only",
+                f"study_count: {len(studies)}",
+                f"reference_plot_study: {next(study.study_id for study in studies if study.reference_plot)}",
+                f"cover_index: {template_entries.get('material.cover_index', '')}",
+                f"background_index: {template_entries['material.background_index']}",
+                f"delta_index: {template_entries['material.delta_index']}",
+                "linearized_permittivity: "
+                + template_entries.get("material.linearized_permittivity", "false"),
+                "planar_x_invariant_reduction: "
+                + template_entries.get("solver.planar_x_invariant_reduction", "false"),
+                f"domain_width_x: {10.0:.6f}",
+                f"domain_width_y: {10.0:.6f}",
+                "source_case_note: the source PDFs indicate a planar one-sided diffused profile, so x acts only as a numerical buffer and not as a physical guide width parameter",
+                "refinement_note: mesh refinement is concentrated near the surface y = 0 and along the diffusion depth scale d = 1",
+                "comparison_status: preliminary_case_2_reproduction_with_b_assumed_constant",
             ]
         )
         + "\n",

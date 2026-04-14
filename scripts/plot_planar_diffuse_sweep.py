@@ -16,9 +16,9 @@ MODE_COLORS = {
 }
 
 FIG2_X_MIN = 0.0
-FIG2_X_MAX = 160.0
+FIG2_X_MAX = 150.0
 FIG2_Y_MIN = 2.200
-FIG2_Y_MAX = 2.208
+FIG2_Y_MAX = 2.210
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,6 +29,11 @@ def parse_args() -> argparse.Namespace:
         "--sweep-root",
         required=True,
         help="Sweep root produced by scripts/run_planar_diffuse_sweep.py",
+    )
+    parser.add_argument(
+        "--reference-points",
+        default=None,
+        help="Optional CSV with approximate Fig. 2 points. Defaults to the consolidated copy.",
     )
     return parser.parse_args()
 
@@ -134,7 +139,10 @@ def append_grid_and_ticks(
 
 
 def generate_reference_dispersion_svg(
-    reference_rows: list[dict[str, str]], output_path: Path
+    reference_rows: list[dict[str, str]],
+    analytic_reference_rows: list[dict[str, str]],
+    external_reference_rows: list[dict[str, str]],
+    output_path: Path,
 ) -> None:
     width = 920
     height = 600
@@ -149,7 +157,19 @@ def generate_reference_dispersion_svg(
             continue
         grouped[row["mode_label"]].append((float(row["k0_b"]), float(row["neff"])))
 
+    external_grouped: defaultdict[str, list[tuple[float, float]]] = defaultdict(list)
+    for row in external_reference_rows:
+        external_grouped[row["mode_label"]].append((float(row["k0_b"]), float(row["neff"])))
+
+    analytic_grouped: defaultdict[str, list[tuple[float, float]]] = defaultdict(list)
+    for row in analytic_reference_rows:
+        analytic_grouped[row["mode_label"]].append((float(row["k0_b"]), float(row["neff"])))
+
     for points in grouped.values():
+        points.sort()
+    for points in external_grouped.values():
+        points.sort()
+    for points in analytic_grouped.values():
         points.sort()
 
     svg_parts: list[str] = []
@@ -162,7 +182,7 @@ def generate_reference_dispersion_svg(
         top=top,
         bottom=bottom,
         title="Caso 2 - Curva de dispersão comparável à Fig. 2",
-        subtitle="Comparação preliminar: eixos e grandezas alinhados à Fig. 2; ainda não é validação final.",
+        subtitle="Comparação preliminar entre FEM, pontos aproximados da figura e solução TE exata do artigo [6-19]; ainda não é validação final.",
         x_label="k0 b",
         y_label="n_eff",
     )
@@ -173,8 +193,8 @@ def generate_reference_dispersion_svg(
         plot_right=plot_right,
         plot_top=plot_top,
         plot_bottom=plot_bottom,
-        x_values=[0.0, 40.0, 80.0, 120.0, 160.0],
-        y_values=[2.200, 2.202, 2.204, 2.206, 2.208],
+        x_values=[0.0, 30.0, 60.0, 90.0, 120.0, 150.0],
+        y_values=[2.200, 2.202, 2.204, 2.206, 2.208, 2.210],
         x_min=FIG2_X_MIN,
         x_max=FIG2_X_MAX,
         y_min=FIG2_Y_MIN,
@@ -202,12 +222,49 @@ def generate_reference_dispersion_svg(
             f'<line x1="{plot_right - 120}" y1="{legend_y}" x2="{plot_right - 88}" y2="{legend_y}" stroke="{color}" stroke-width="2.4"/>'
         )
         svg_parts.append(
-            f'<text x="{plot_right - 76}" y="{legend_y + 4}" font-size="13" font-family="Arial">{mode_label}</text>'
+            f'<text x="{plot_right - 76}" y="{legend_y + 4}" font-size="13" font-family="Arial">{mode_label} FEM</text>'
         )
         legend_y += 24
 
+        analytic_points = analytic_grouped.get(mode_label, [])
+        if analytic_points:
+            analytic_polyline_points = []
+            for x_value, y_value in analytic_points:
+                x_pixel = map_value(x_value, FIG2_X_MIN, FIG2_X_MAX, plot_left, plot_right)
+                y_pixel = map_value(y_value, FIG2_Y_MIN, FIG2_Y_MAX, plot_bottom, plot_top)
+                analytic_polyline_points.append((x_pixel, y_pixel))
+                svg_parts.append(
+                    f'<rect x="{x_pixel - 2.7:.2f}" y="{y_pixel - 2.7:.2f}" width="5.4" height="5.4" fill="#ffffff" stroke="{color}" stroke-width="1.2"/>'
+                )
+            svg_parts.append(
+                f'<polyline fill="none" stroke="{color}" stroke-width="1.6" stroke-dasharray="8 6" points="{build_polyline(analytic_polyline_points)}"/>'
+            )
+            svg_parts.append(
+                f'<line x1="{plot_right - 120}" y1="{legend_y}" x2="{plot_right - 88}" y2="{legend_y}" stroke="{color}" stroke-width="1.6" stroke-dasharray="8 6"/>'
+            )
+            svg_parts.append(
+                f'<text x="{plot_right - 76}" y="{legend_y + 4}" font-size="13" font-family="Arial">{mode_label} exato</text>'
+            )
+            legend_y += 24
+
+        reference_points = external_grouped.get(mode_label, [])
+        for x_value, y_value in reference_points:
+            x_pixel = map_value(x_value, FIG2_X_MIN, FIG2_X_MAX, plot_left, plot_right)
+            y_pixel = map_value(y_value, FIG2_Y_MIN, FIG2_Y_MAX, plot_bottom, plot_top)
+            svg_parts.append(
+                f'<circle cx="{x_pixel:.2f}" cy="{y_pixel:.2f}" r="4.0" fill="#ffffff" stroke="{color}" stroke-width="1.8"/>'
+            )
+        if reference_points:
+            svg_parts.append(
+                f'<circle cx="{plot_right - 104:.2f}" cy="{legend_y - 4:.2f}" r="4.0" fill="#ffffff" stroke="{color}" stroke-width="1.8"/>'
+            )
+            svg_parts.append(
+                f'<text x="{plot_right - 76}" y="{legend_y}" font-size="13" font-family="Arial">{mode_label} figura</text>'
+            )
+            legend_y += 24
+
     svg_parts.append(
-        f'<text x="{plot_left}" y="{height - 46}" font-size="12" fill="#666" font-family="Arial">Saída consolidada em k0 b e n_eff para comparação preliminar com a Fig. 2.</text>'
+        f'<text x="{plot_left}" y="{height - 46}" font-size="12" fill="#666" font-family="Arial">Linha contínua e pontos cheios: FEM. Linha tracejada e quadrados vazados: solução TE exata de [6-19]. Círculos vazados: pontos aproximados da figura.</text>'
     )
     svg_parts.append("</svg>")
     write_svg(output_path, "\n".join(svg_parts))
@@ -247,7 +304,7 @@ def generate_mode1_sensitivity_svg(
         top=top,
         bottom=bottom,
         title="Sensibilidade numérica preliminar - TE0",
-        subtitle="Mesmo eixo k0 b da Fig. 2 para facilitar comparação entre malhas e truncamentos.",
+        subtitle="Mesmo eixo k0 b da figura de referência, com perfil planar unilateral e d = 1.0.",
         x_label="k0 b",
         y_label="n_eff",
     )
@@ -265,7 +322,7 @@ def generate_mode1_sensitivity_svg(
         plot_right=plot_right,
         plot_top=plot_top,
         plot_bottom=plot_bottom,
-        x_values=[0.0, 40.0, 80.0, 120.0, 160.0],
+        x_values=[0.0, 30.0, 60.0, 90.0, 120.0, 150.0],
         y_values=[
             y_min,
             y_min + 0.25 * (y_max - y_min),
@@ -312,9 +369,21 @@ def main() -> None:
 
     consolidated_rows = read_csv_rows(consolidated_dir / "consolidated_modes.csv")
     reference_rows = read_csv_rows(consolidated_dir / "reference_dispersion.csv")
+    analytic_reference_rows = read_csv_rows(consolidated_dir / "analytic_reference.csv")
+    if args.reference_points is None:
+        reference_points_path = consolidated_dir / "fig2_reference_points.csv"
+    else:
+        reference_points_path = Path(args.reference_points)
+        if not reference_points_path.is_absolute():
+            reference_points_path = Path(__file__).resolve().parents[1] / reference_points_path
+        reference_points_path = reference_points_path.resolve()
+    external_reference_rows = read_csv_rows(reference_points_path)
 
     generate_reference_dispersion_svg(
-        reference_rows, plots_dir / "fig2_like_reference.svg"
+        reference_rows,
+        analytic_reference_rows,
+        external_reference_rows,
+        plots_dir / "fig2_like_reference.svg",
     )
     generate_mode1_sensitivity_svg(
         consolidated_rows, plots_dir / "mode1_sensitivity.svg"

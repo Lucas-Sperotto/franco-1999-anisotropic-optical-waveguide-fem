@@ -35,22 +35,45 @@ struct GlobalAssemblyResult {
     GlobalNodalMaterialFields material_fields;
     std::size_t node_count = 0;
     std::size_t element_count = 0;
+    std::size_t assembled_dof_count = 0;
     double k0 = 1.0;
+    bool planar_x_invariant_reduction = false;
     std::string local_material_model;
 };
 
 std::vector<int> detect_boundary_node_ids(const Mesh& mesh);
+std::vector<int> detect_y_extrema_node_ids(const Mesh& mesh);
+std::vector<int> detect_dirichlet_node_ids(const Mesh& mesh,
+                                           const std::string& boundary_label);
 GlobalAssemblyResult assemble_global_system(
     const Mesh& mesh,
     const GlobalNodalMaterialFields& material_fields,
-    const ArticleLocalAssemblyOptions& local_options);
+    const ArticleLocalAssemblyOptions& local_options,
+    const std::string& boundary_label = "dirichlet_zero_on_boundary_nodes",
+    bool planar_x_invariant_reduction = false);
 GlobalAssemblyResult assemble_global_homogeneous_isotropic_system(
     const Mesh& mesh,
     double refractive_index,
-    const ArticleLocalAssemblyOptions& local_options);
+    const ArticleLocalAssemblyOptions& local_options,
+    const std::string& boundary_label = "dirichlet_zero_on_boundary_nodes",
+    bool planar_x_invariant_reduction = false);
 GlobalAssemblyResult assemble_global_planar_diffuse_isotropic_system(
     const Mesh& mesh,
     const PlanarDiffuseIsotropicProfile& profile,
-    const ArticleLocalAssemblyOptions& local_options);
+    const ArticleLocalAssemblyOptions& local_options,
+    const std::string& boundary_label = "dirichlet_zero_on_boundary_nodes",
+    bool planar_x_invariant_reduction = false);
+GlobalAssemblyResult assemble_global_planar_surface_diffuse_isotropic_system(
+    const Mesh& mesh,
+    const PlanarDiffuseIsotropicProfile& profile,
+    const ArticleLocalAssemblyOptions& local_options,
+    const std::string& boundary_label = "dirichlet_zero_on_y_extrema",
+    bool planar_x_invariant_reduction = false);
+GlobalAssemblyResult assemble_global_rectangular_channel_step_index_system(
+    const Mesh& mesh,
+    const RectangularChannelStepIndexProfile& profile,
+    const ArticleLocalAssemblyOptions& local_options,
+    const std::string& boundary_label = "dirichlet_zero_on_boundary_nodes",
+    bool planar_x_invariant_reduction = false);
 
 }  // namespace waveguide

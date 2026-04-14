@@ -84,6 +84,30 @@ waveguide::Mesh make_planar_variable_mesh() {
     return mesh;
 }
 
+waveguide::Mesh make_rectangular_channel_mesh() {
+    waveguide::Mesh mesh;
+    mesh.format = "simple_mesh_v1";
+    mesh.dimension = 2;
+    mesh.nodes = {
+        {1, {-2.0, -2.0}},  {2, {-1.0, -2.0}}, {3, {0.0, -2.0}},
+        {4, {1.0, -2.0}},   {5, {2.0, -2.0}},  {6, {-2.0, 0.0}},
+        {7, {-1.0, 0.0}},   {8, {0.0, 0.0}},   {9, {1.0, 0.0}},
+        {10, {2.0, 0.0}},   {11, {-2.0, 1.0}}, {12, {-1.0, 1.0}},
+        {13, {0.0, 1.0}},   {14, {1.0, 1.0}},  {15, {2.0, 1.0}},
+        {16, {-2.0, 3.0}},  {17, {-1.0, 3.0}}, {18, {0.0, 3.0}},
+        {19, {1.0, 3.0}},   {20, {2.0, 3.0}},
+    };
+    mesh.triangles = {
+        {1, {1, 2, 7}},    {2, {1, 7, 6}},    {3, {2, 3, 8}},    {4, {2, 8, 7}},
+        {5, {3, 4, 9}},    {6, {3, 9, 8}},    {7, {4, 5, 10}},   {8, {4, 10, 9}},
+        {9, {6, 7, 12}},   {10, {6, 12, 11}}, {11, {7, 8, 13}},  {12, {7, 13, 12}},
+        {13, {8, 9, 14}},  {14, {8, 14, 13}}, {15, {9, 10, 15}}, {16, {9, 15, 14}},
+        {17, {11, 12, 17}}, {18, {11, 17, 16}}, {19, {12, 13, 18}}, {20, {12, 18, 17}},
+        {21, {13, 14, 19}}, {22, {13, 19, 18}}, {23, {14, 15, 20}}, {24, {14, 20, 19}},
+    };
+    return mesh;
+}
+
 }  // namespace
 
 int main() {
@@ -167,8 +191,11 @@ int main() {
         const waveguide::Mesh planar_mesh = make_planar_variable_mesh();
         const waveguide::PlanarDiffuseIsotropicProfile planar_profile{
             2.20,
+            2.20,
             0.01,
             1.0,
+            0.0,
+            false,
         };
         const waveguide::GlobalNodalMaterialFields planar_fields =
             waveguide::make_planar_diffuse_isotropic_global_material(
@@ -214,6 +241,127 @@ int main() {
         expect_true(planar_eigen_solution.eigenpairs.front().eigenvalue >
                         planar_eigen_solution.eigenpairs.back().eigenvalue,
                     "expected eigenpairs to be sorted in descending order");
+
+        const waveguide::PlanarDiffuseIsotropicProfile source_planar_profile{
+            2.20,
+            1.00,
+            0.01,
+            1.0,
+            0.0,
+            true,
+        };
+        const waveguide::GlobalAssemblyResult source_planar_assembly =
+            waveguide::assemble_global_planar_surface_diffuse_isotropic_system(
+                planar_mesh,
+                source_planar_profile,
+                local_options,
+                "dirichlet_zero_on_y_extrema",
+                true);
+
+        expect_true(source_planar_assembly.planar_x_invariant_reduction,
+                    "expected the source-based planar case to use x-invariant reduction");
+        expect_true(source_planar_assembly.assembled_dof_count == 5,
+                    "expected one global dof per y level in the x-invariant planar case");
+        expect_true(source_planar_assembly.boundary_condition.free_dof_indices.size() == 3,
+                    "expected three free y levels after truncation on y extrema");
+        expect_true(
+            waveguide::get_global_material_value(
+                source_planar_assembly.material_fields.nx2_by_node_id, 2, "nx2") ==
+                1.0,
+            "expected the cover permittivity to match n0 = 1.0 above the surface");
+        expect_true(
+            waveguide::get_global_material_value(
+                source_planar_assembly.material_fields.nx2_by_node_id, 8, "nx2") >
+                waveguide::get_global_material_value(
+                    source_planar_assembly.material_fields.nx2_by_node_id, 11, "nx2"),
+            "expected the diffused profile to decay with depth inside the substrate");
+
+        const waveguide::GeneralizedEigenSolution source_planar_eigen_solution =
+            waveguide::solve_generalized_eigenproblem_dense(
+                source_planar_assembly.matrices.F_reduced,
+                source_planar_assembly.matrices.M_reduced,
+                local_options.k0,
+                3);
+
+        expect_true(source_planar_eigen_solution.eigenpairs.size() == 3,
+                    "expected three x-invariant source-planar eigenpairs");
+        expect_true(source_planar_eigen_solution.eigenpairs[0].has_neff &&
+                        source_planar_eigen_solution.eigenpairs[1].has_neff &&
+                        source_planar_eigen_solution.eigenpairs[2].has_neff,
+                    "expected valid n_eff values for the first three source-planar modes");
+        expect_true(source_planar_eigen_solution.eigenpairs[0].n_eff >
+                        source_planar_eigen_solution.eigenpairs[1].n_eff &&
+                        source_planar_eigen_solution.eigenpairs[1].n_eff >
+                            source_planar_eigen_solution.eigenpairs[2].n_eff,
+                    "expected the source-planar modal indices to be strictly ordered");
+        expect_true(source_planar_eigen_solution.eigenpairs[0].n_eff -
+                        source_planar_eigen_solution.eigenpairs[1].n_eff >
+                            1.0e-4,
+                    "expected visible modal separation in the x-invariant planar case");
+
+        const waveguide::Mesh channel_mesh = make_rectangular_channel_mesh();
+        const waveguide::RectangularChannelStepIndexProfile channel_profile{
+            1.0,
+            1.43,
+            1.50,
+            2.0,
+            1.0,
+            0.0,
+            0.0,
+        };
+        const double channel_frequency_normalized = 2.0;
+        const double channel_k0 =
+            channel_frequency_normalized * kPi /
+            std::sqrt(channel_profile.core_index * channel_profile.core_index -
+                      channel_profile.substrate_index *
+                          channel_profile.substrate_index);
+        const waveguide::ArticleLocalAssemblyOptions channel_local_options =
+            waveguide::make_default_article_local_assembly_options(channel_k0);
+        const waveguide::GlobalAssemblyResult channel_assembly =
+            waveguide::assemble_global_rectangular_channel_step_index_system(
+                channel_mesh, channel_profile, channel_local_options);
+
+        expect_true(
+            waveguide::get_global_material_value(
+                channel_assembly.material_fields.nx2_by_node_id, 3, "nx2") == 1.0,
+            "expected cover node to keep n1^2");
+        expect_true(
+            waveguide::get_global_material_value(
+                channel_assembly.material_fields.nx2_by_node_id, 8, "nx2") ==
+                channel_profile.core_index * channel_profile.core_index,
+            "expected core node to keep n3^2");
+        expect_true(
+            waveguide::get_global_material_value(
+                channel_assembly.material_fields.nx2_by_node_id, 18, "nx2") ==
+                channel_profile.substrate_index * channel_profile.substrate_index,
+            "expected deep substrate node to keep n2^2");
+        expect_true(waveguide::is_dense_matrix_symmetric(channel_assembly.matrices.M_full),
+                    "channel M_full should be symmetric");
+        expect_true(waveguide::is_dense_matrix_symmetric(channel_assembly.matrices.F_full),
+                    "channel F_full should be symmetric");
+        expect_true(channel_assembly.boundary_condition.free_dof_indices.size() == 6,
+                    "unexpected number of free dofs in the channel mesh");
+
+        const waveguide::GeneralizedEigenSolution channel_eigen_solution =
+            waveguide::solve_generalized_eigenproblem_dense(
+                channel_assembly.matrices.F_reduced,
+                channel_assembly.matrices.M_reduced,
+                channel_local_options.k0,
+                1);
+
+        expect_true(channel_eigen_solution.transformed_matrix_is_symmetric,
+                    "the channel transformed matrix should be symmetric");
+        expect_true(channel_eigen_solution.solver_label == "symmetric_jacobi",
+                    "expected the symmetric dense solver path for the channel case");
+        expect_true(channel_eigen_solution.eigenpairs.size() == 1,
+                    "expected one channel eigenpair");
+        expect_true(channel_eigen_solution.eigenpairs.front().has_neff,
+                    "expected a valid channel n_eff");
+        expect_true(channel_eigen_solution.eigenpairs.front().n_eff >
+                        channel_profile.substrate_index &&
+                        channel_eigen_solution.eigenpairs.front().n_eff <
+                            channel_profile.core_index,
+                    "expected the leading channel n_eff to lie between n2 and n3");
 
         std::cout << "waveguide_global_tests: all checks passed\n";
         return EXIT_SUCCESS;

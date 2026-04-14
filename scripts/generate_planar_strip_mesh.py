@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a simple 3-column strip mesh for planar-guide studies."""
+"""Generate a structured triangular mesh for planar-guide studies."""
 
 from __future__ import annotations
 
@@ -12,8 +12,16 @@ def parse_args() -> argparse.Namespace:
         description="Generate a simple strip-like triangular mesh."
     )
     parser.add_argument("--output", required=True, help="Output .mesh path")
-    parser.add_argument("--y-max", type=float, required=True, help="Positive y truncation")
-    parser.add_argument("--dy", type=float, required=True, help="Uniform vertical spacing")
+    parser.add_argument(
+        "--y-max",
+        type=float,
+        help="Positive y truncation for the legacy uniform strip mode",
+    )
+    parser.add_argument(
+        "--dy",
+        type=float,
+        help="Uniform vertical spacing for the legacy uniform strip mode",
+    )
     parser.add_argument(
         "--x-left", type=float, default=-3.0, help="Left boundary x coordinate"
     )
@@ -22,6 +30,16 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--x-right", type=float, default=3.0, help="Right boundary x coordinate"
+    )
+    parser.add_argument(
+        "--x-values",
+        default=None,
+        help="Comma-separated x coordinates for a general structured rectangular grid",
+    )
+    parser.add_argument(
+        "--y-values",
+        default=None,
+        help="Comma-separated y coordinates for a general structured rectangular grid",
     )
     return parser.parse_args()
 
@@ -43,10 +61,33 @@ def generate_y_values(y_max: float, dy: float) -> list[float]:
     return [(-y_max + index * dy) for index in range(step_count + 1)]
 
 
+def parse_coordinate_values(raw_value: str, axis_label: str) -> list[float]:
+    values = [float(token.strip()) for token in raw_value.split(",") if token.strip()]
+    if len(values) < 2:
+        raise ValueError(f"--{axis_label}-values must contain at least two coordinates")
+    if any(values[index] >= values[index + 1] for index in range(len(values) - 1)):
+        raise ValueError(
+            f"--{axis_label}-values must be strictly increasing"
+        )
+    return values
+
+
 def main() -> None:
     args = parse_args()
-    y_values = generate_y_values(args.y_max, args.dy)
-    x_values = [args.x_left, args.x_center, args.x_right]
+    if args.x_values is not None or args.y_values is not None:
+        if args.x_values is None or args.y_values is None:
+            raise ValueError(
+                "Both --x-values and --y-values must be provided together"
+            )
+        x_values = parse_coordinate_values(args.x_values, "x")
+        y_values = parse_coordinate_values(args.y_values, "y")
+    else:
+        if args.y_max is None or args.dy is None:
+            raise ValueError(
+                "Either provide --x-values/--y-values or the legacy --y-max/--dy pair"
+            )
+        y_values = generate_y_values(args.y_max, args.dy)
+        x_values = [args.x_left, args.x_center, args.x_right]
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -67,29 +108,20 @@ def main() -> None:
 
     current_triangle_id = 1
     for row in range(len(y_values) - 1):
-        left_lower = node_id(row, 0)
-        center_lower = node_id(row, 1)
-        right_lower = node_id(row, 2)
-        left_upper = node_id(row + 1, 0)
-        center_upper = node_id(row + 1, 1)
-        right_upper = node_id(row + 1, 2)
+        for column in range(len(x_values) - 1):
+            lower_left = node_id(row, column)
+            lower_right = node_id(row, column + 1)
+            upper_left = node_id(row + 1, column)
+            upper_right = node_id(row + 1, column + 1)
 
-        triangle_lines.append(
-            f"triangle {current_triangle_id} {left_lower} {center_lower} {center_upper}"
-        )
-        current_triangle_id += 1
-        triangle_lines.append(
-            f"triangle {current_triangle_id} {left_lower} {center_upper} {left_upper}"
-        )
-        current_triangle_id += 1
-        triangle_lines.append(
-            f"triangle {current_triangle_id} {center_lower} {right_lower} {right_upper}"
-        )
-        current_triangle_id += 1
-        triangle_lines.append(
-            f"triangle {current_triangle_id} {center_lower} {right_upper} {center_upper}"
-        )
-        current_triangle_id += 1
+            triangle_lines.append(
+                f"triangle {current_triangle_id} {lower_left} {lower_right} {upper_right}"
+            )
+            current_triangle_id += 1
+            triangle_lines.append(
+                f"triangle {current_triangle_id} {lower_left} {upper_right} {upper_left}"
+            )
+            current_triangle_id += 1
 
     header = [
         f"# {output_path.name}",

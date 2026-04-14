@@ -2,23 +2,26 @@ schema_version: 1
 
 case:
   id: case02_planar_diffuse_isotropic
-  description: "Planar diffuse isotropic guide with exponential profile depending on y"
+  description: "Planar diffuse isotropic guide with one-sided exponential substrate profile"
 
 mesh:
-  file: ../meshes/planar_strip_y6_fine.mesh
+  file: ../meshes/planar_d10_a2b_smoke.mesh
 
 material:
-  model: planar_diffuse_isotropic_exponential
+  model: planar_diffuse_isotropic_surface_exponential
   background_index: 2.20
+  cover_index: 1.00
   delta_index: 0.01
   diffusion_depth: 1.00
+  linearized_permittivity: true
 
 boundary:
-  condition: dirichlet_zero_on_boundary
+  condition: dirichlet_zero_on_y_extrema
 
 solver:
   requested_modes: 3
   wavelength_um: 1.55
+  planar_x_invariant_reduction: true
 
 output:
   tag: planar_diffuse_isotropic

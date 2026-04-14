@@ -1,0 +1,29 @@
+schema_version: 1
+
+case:
+  id: case01_homogeneous_channel_isotropic
+  description: "Homogeneous isotropic rectangular channel guide with a = 2b and b = 1"
+
+mesh:
+  file: ../meshes/channel_a2b_b1_smoke.mesh
+
+material:
+  model: rectangular_channel_step_index
+  cover_index: 1.00
+  substrate_index: 1.43
+  core_index: 1.50
+  core_width: 2.00
+  core_height: 1.00
+  core_center_x: 0.00
+  surface_y: 0.00
+
+boundary:
+  condition: dirichlet_zero_on_boundary_nodes
+
+solver:
+  requested_modes: 1
+  wavelength_um: 0.452830188679
+  planar_x_invariant_reduction: false
+
+output:
+  tag: homogeneous_channel_isotropic

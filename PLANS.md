@@ -42,3 +42,6 @@ Critérios de aceite:
 - caso 1 funcional
 - caso 2 funcional
 - depois avançar para os demais
+
+
+Caso 1 não esta funcionando, autovalor precisa ser maior que 2.045 e menor que 2.25.

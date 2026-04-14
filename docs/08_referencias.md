@@ -12,9 +12,9 @@ As referências abaixo foram preservadas na numeração citada ao longo das seç
 
 [5] P. E. Lagasse and R. V. Ramaswamy, “A Variational Finite-Difference Method for Analyzing Channel Waveguides with Arbitrary Index Profiles,” *IEEE Journal of Quantum Electronics*, vol. QE-22, no. 6, pp. 968-976, 1986.
 
-[6] K. Hayata, M. Koshiba and M. Suzuki, “Analysis of Partially Metal-Clad and Dielectric Overlay-Loaded Diffused Optical Waveguide,” *Electronics and Communications in Japan*, vol. 67-C, no. 5, pp. 108-116, 1984.
+[6] K. Hayata, M. Koshiba and M. Suzuki, “Analysis of Partially Metal-Clad and Dielectric Overlay-Loaded Diffused Optical Waveguide,” *Electronics and Communications in Japan*, vol. 67-C, no. 5, pp. 108-116, 1984. <https://doi.org/10.1002/ecja.4400670513>
 
-[7] Ch. Pichot, “Exact Numerical Solutions for the Diffused Channel Waveguide,” *Optics Communications*, vol. 41, no. 3, pp. 169-173, 1982.
+[7] Ch. Pichot, “Exact Numerical Solutions for the Diffused Channel Waveguide,” *Optics Communications*, vol. 41, no. 3, pp. 169-173, 1982. <https://doi.org/10.1016/0030-4018(82)90064-5>
 
 [8] C. Yeh, K. Ha, S. B. Dang and W. P. Brown, “Single-mode optical waveguides,” *Applied Optics*, vol. 18, no. 10, pp. 1490-1504, 1979.
 
@@ -38,7 +38,7 @@ As referências abaixo foram preservadas na numeração citada ao longo das seç
 
 [18] M. A. R. Franco, A. Passaro and J. M. Machado, “MATHEMATICA Notebook for computing tetrahedral finite element shape functions and matrices for the Helmholtz equation,” *IEEE Transactions on Magnetics*, vol. 34, no. 5, pp. 3387-3390, 1998.
 
-[19] E. A. J. Marcatili, “Dielectric rectangular waveguide and directional coupler for integrated optics,” *Bell Syst. Tech. J.*, vol. 48, pp. 2071-2102, 1969.
+[19] E. A. J. Marcatili, “Dielectric rectangular waveguide and directional coupler for integrated optics,” *Bell Syst. Tech. J.*, vol. 48, pp. 2071-2102, 1969. <https://doi.org/10.1002/j.1538-7305.1969.tb01166.x>
 
 [20] S. T. Vohra, A. R. Michelson and S. E. Asher, “Diffusion characteristics and waveguiding properties of proton-exchanged and annealed $LiNbO_3$ channel waveguides,” *J. Applied Physics*, vol. 66, no. 11, pp. 5161-5173, 1989.
 

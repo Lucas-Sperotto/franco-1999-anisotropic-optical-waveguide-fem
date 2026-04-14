@@ -310,14 +310,14 @@ std::string build_neff_csv(const GeneralizedEigenSolution& solution) {
 }
 
 std::string build_dispersion_curve_points_csv(const GeneralizedEigenSolution& solution,
-                                              double diffusion_depth,
+                                              double characteristic_b,
                                               double k0) {
     std::ostringstream stream;
     stream << "b,k0,k0_b,mode_index,mode_label,eigenvalue_n_eff_squared,neff,beta,status\n";
     for (std::size_t i = 0; i < solution.eigenpairs.size(); ++i) {
         const GeneralizedEigenpair& eigenpair = solution.eigenpairs[i];
-        stream << format_number(diffusion_depth) << "," << format_number(k0) << ","
-               << format_number(k0 * diffusion_depth) << "," << (i + 1) << ","
+        stream << format_number(characteristic_b) << "," << format_number(k0) << ","
+               << format_number(k0 * characteristic_b) << "," << (i + 1) << ","
                << mode_index_to_label(i + 1) << ","
                << format_number(eigenpair.eigenvalue) << ",";
         if (eigenpair.has_neff) {
@@ -347,6 +347,13 @@ std::string build_nodal_material_fields_csv(const Mesh& mesh,
                << format_number(std::sqrt(std::max(nx2, 0.0))) << "\n";
     }
     return stream.str();
+}
+
+double resolve_characteristic_b(const CaseConfig& config) {
+    if (config.material_model == "rectangular_channel_step_index") {
+        return config.core_height;
+    }
+    return config.diffusion_depth;
 }
 
 }  // namespace
@@ -386,7 +393,11 @@ int run_application(int argc, char** argv) {
 
         if (config.material_model == "homogeneous_isotropic_constant") {
             global_assembly = assemble_global_homogeneous_isotropic_system(
-                mesh, config.refractive_index, local_options);
+                mesh,
+                config.refractive_index,
+                local_options,
+                config.boundary_condition,
+                config.planar_x_invariant_reduction);
             material_profile_summary
                 << "material_model: homogeneous_isotropic_constant\n"
                 << "refractive_index: " << format_number(config.refractive_index) << "\n"
@@ -395,17 +406,90 @@ int run_application(int argc, char** argv) {
         } else if (config.material_model == "planar_diffuse_isotropic_exponential") {
             const PlanarDiffuseIsotropicProfile profile{
                 config.background_index,
+                config.cover_index,
                 config.delta_index,
                 config.diffusion_depth,
+                0.0,
+                config.linearized_permittivity,
             };
             global_assembly = assemble_global_planar_diffuse_isotropic_system(
-                mesh, profile, local_options);
+                mesh,
+                profile,
+                local_options,
+                config.boundary_condition,
+                config.planar_x_invariant_reduction);
             material_profile_summary
                 << "material_model: planar_diffuse_isotropic_exponential\n"
                 << "background_index: " << format_number(profile.background_index) << "\n"
+                << "cover_index: " << format_number(profile.cover_index) << "\n"
                 << "delta_index: " << format_number(profile.delta_index) << "\n"
                 << "diffusion_depth: " << format_number(profile.diffusion_depth) << "\n"
+                << "linearized_permittivity: "
+                << bool_to_text(profile.linearized_permittivity) << "\n"
                 << "profile_formula: n(y) = n_background + delta_n * exp(-|y|/b)\n";
+        } else if (config.material_model ==
+                   "planar_diffuse_isotropic_surface_exponential") {
+            const PlanarDiffuseIsotropicProfile profile{
+                config.background_index,
+                config.cover_index,
+                config.delta_index,
+                config.diffusion_depth,
+                0.0,
+                config.linearized_permittivity,
+            };
+            global_assembly = assemble_global_planar_surface_diffuse_isotropic_system(
+                mesh,
+                profile,
+                local_options,
+                config.boundary_condition,
+                config.planar_x_invariant_reduction);
+            material_profile_summary
+                << "material_model: planar_diffuse_isotropic_surface_exponential\n"
+                << "substrate_index: " << format_number(profile.background_index) << "\n"
+                << "cover_index: " << format_number(profile.cover_index) << "\n"
+                << "delta_index: " << format_number(profile.delta_index) << "\n"
+                << "diffusion_depth: " << format_number(profile.diffusion_depth) << "\n"
+                << "surface_coordinate: " << format_number(profile.surface_coordinate)
+                << "\n"
+                << "linearized_permittivity: "
+                << bool_to_text(profile.linearized_permittivity) << "\n";
+            if (profile.linearized_permittivity) {
+                material_profile_summary
+                    << "profile_formula: n(y) = n_cover for y < 0, and "
+                       "epsilon_r(y) = n_s^2 + 2 n_s delta_n * exp(-y/d) for y >= 0\n";
+            } else {
+                material_profile_summary
+                    << "profile_formula: n(y) = n_cover for y < 0, and "
+                       "n(y) = n_s + delta_n * exp(-y/d) for y >= 0\n";
+            }
+        } else if (config.material_model == "rectangular_channel_step_index") {
+            const RectangularChannelStepIndexProfile profile{
+                config.cover_index,
+                config.substrate_index,
+                config.core_index,
+                config.core_width,
+                config.core_height,
+                config.core_center_x,
+                config.surface_y,
+            };
+            global_assembly = assemble_global_rectangular_channel_step_index_system(
+                mesh,
+                profile,
+                local_options,
+                config.boundary_condition,
+                config.planar_x_invariant_reduction);
+            material_profile_summary
+                << "material_model: rectangular_channel_step_index\n"
+                << "cover_index: " << format_number(profile.cover_index) << "\n"
+                << "substrate_index: " << format_number(profile.substrate_index)
+                << "\n"
+                << "core_index: " << format_number(profile.core_index) << "\n"
+                << "core_width: " << format_number(profile.core_width) << "\n"
+                << "core_height: " << format_number(profile.core_height) << "\n"
+                << "core_center_x: " << format_number(profile.core_center_x) << "\n"
+                << "surface_y: " << format_number(profile.surface_y) << "\n"
+                << "profile_formula: n(x,y) = n_3 inside the rectangular core, "
+                   "n_1 above the surface, and n_2 elsewhere in the substrate.\n";
         } else {
             throw std::runtime_error("Unsupported material.model at runtime: " +
                                      config.material_model);
@@ -430,6 +514,7 @@ int run_application(int argc, char** argv) {
                 global_assembly.matrices.M_reduced,
                 k0,
                 static_cast<std::size_t>(config.requested_modes));
+        const double characteristic_b = resolve_characteristic_b(config);
 
         const std::filesystem::path output_dir =
             std::filesystem::absolute(options.output_dir).lexically_normal();
@@ -456,8 +541,9 @@ int run_application(int argc, char** argv) {
         std::ostringstream run_summary;
         run_summary << "status: global_dense_material_cases_ready\n";
         run_summary << "partial_scope_warning: This stage assembles and solves the "
-                       "homogeneous isotropic constant case and the first planar diffuse "
-                       "isotropic variable-coefficient case.\n";
+                       "homogeneous isotropic constant case, the first planar diffuse "
+                       "isotropic variable-coefficient case, and the initial homogeneous "
+                       "rectangular channel case.\n";
         run_summary << "schema_version: " << config.schema_version << "\n";
         run_summary << "case_id: " << config.case_id << "\n";
         run_summary << "description: " << config.description << "\n";
@@ -475,23 +561,41 @@ int run_application(int argc, char** argv) {
         if (config.material_model == "homogeneous_isotropic_constant") {
             run_summary << "refractive_index: " << format_number(config.refractive_index)
                         << "\n";
+        } else if (config.material_model == "rectangular_channel_step_index") {
+            run_summary << "cover_index: " << format_number(config.cover_index) << "\n";
+            run_summary << "substrate_index: " << format_number(config.substrate_index)
+                        << "\n";
+            run_summary << "core_index: " << format_number(config.core_index) << "\n";
+            run_summary << "core_width: " << format_number(config.core_width) << "\n";
+            run_summary << "core_height: " << format_number(config.core_height) << "\n";
+            run_summary << "core_center_x: " << format_number(config.core_center_x)
+                        << "\n";
+            run_summary << "surface_y: " << format_number(config.surface_y) << "\n";
         } else {
             run_summary << "background_index: " << format_number(config.background_index)
                         << "\n";
+            run_summary << "cover_index: " << format_number(config.cover_index) << "\n";
             run_summary << "delta_index: " << format_number(config.delta_index) << "\n";
             run_summary << "diffusion_depth: " << format_number(config.diffusion_depth)
                         << "\n";
+            run_summary << "linearized_permittivity: "
+                        << bool_to_text(config.linearized_permittivity) << "\n";
         }
         run_summary << "boundary_condition: " << config.boundary_condition << "\n";
+        run_summary << "planar_x_invariant_reduction: "
+                    << bool_to_text(config.planar_x_invariant_reduction) << "\n";
         run_summary << "requested_modes: " << config.requested_modes << "\n";
         run_summary << "wavelength_um: " << format_number(config.wavelength_um) << "\n";
         run_summary << "k0_used: " << format_number(k0) << "\n";
-        run_summary << "k0_b_used: "
-                    << format_number(k0 * std::max(config.diffusion_depth, 0.0)) << "\n";
+        run_summary << "characteristic_b_used: " << format_number(characteristic_b)
+                    << "\n";
+        run_summary << "k0_b_used: " << format_number(k0 * characteristic_b) << "\n";
         run_summary << "mesh_format: " << mesh.format << "\n";
         run_summary << "mesh_dimension: " << mesh.dimension << "\n";
         run_summary << "mesh_node_count: " << mesh.nodes.size() << "\n";
         run_summary << "mesh_triangle_count: " << mesh.triangles.size() << "\n";
+        run_summary << "assembled_dof_count: " << global_assembly.assembled_dof_count
+                    << "\n";
         run_summary << "local_assembly_available: yes\n";
         run_summary << "global_assembly_available: yes\n";
         run_summary << "eigensolver_available: yes\n";
@@ -521,6 +625,10 @@ int run_application(int argc, char** argv) {
         run_summary << "boundary_node_ids: "
                     << format_generic_vector(
                            global_assembly.boundary_condition.constrained_node_ids)
+                    << "\n";
+        run_summary << "constrained_dof_indices: "
+                    << format_generic_vector(
+                           global_assembly.boundary_condition.constrained_dof_indices)
                     << "\n";
         run_summary << "free_node_ids: "
                     << format_generic_vector(global_assembly.boundary_condition.free_node_ids)
@@ -664,12 +772,38 @@ int run_application(int argc, char** argv) {
                            "the nodal material fields change before element assembly.\n";
                 summary << "node_count: " << global_assembly.node_count << "\n";
                 summary << "element_count: " << global_assembly.element_count << "\n";
+                summary << "planar_x_invariant_reduction: "
+                        << bool_to_text(global_assembly.planar_x_invariant_reduction)
+                        << "\n";
+                summary << "assembled_dof_count: "
+                        << global_assembly.assembled_dof_count << "\n";
                 summary << "full_matrix_dimension: "
                         << global_assembly.matrices.M_full.size() << "\n";
                 summary << "reduced_matrix_dimension: "
                         << global_assembly.matrices.M_reduced.size() << "\n";
                 summary << "boundary_condition: "
                         << global_assembly.boundary_condition.label << "\n";
+                if (config.material_model ==
+                    "planar_diffuse_isotropic_exponential" ||
+                    config.material_model ==
+                        "planar_diffuse_isotropic_surface_exponential") {
+                    summary << "cover_index: " << format_number(config.cover_index) << "\n";
+                    summary << "background_index: "
+                            << format_number(config.background_index) << "\n";
+                    summary << "delta_index: " << format_number(config.delta_index) << "\n";
+                    summary << "linearized_permittivity: "
+                            << bool_to_text(config.linearized_permittivity) << "\n";
+                } else if (config.material_model ==
+                           "rectangular_channel_step_index") {
+                    summary << "cover_index: " << format_number(config.cover_index)
+                            << "\n";
+                    summary << "substrate_index: "
+                            << format_number(config.substrate_index) << "\n";
+                    summary << "core_index: " << format_number(config.core_index) << "\n";
+                    summary << "core_width: " << format_number(config.core_width) << "\n";
+                    summary << "core_height: " << format_number(config.core_height)
+                            << "\n";
+                }
                 summary << "boundary_node_ids: "
                         << format_generic_vector(
                                global_assembly.boundary_condition.constrained_node_ids)
@@ -708,9 +842,9 @@ int run_application(int argc, char** argv) {
                 summary << "requested_modes: " << config.requested_modes << "\n";
                 summary << "computed_modes: " << eigen_solution.eigenpairs.size() << "\n";
                 summary << "k0_used: " << format_number(k0) << "\n";
-                summary << "k0_b_used: "
-                        << format_number(k0 * std::max(config.diffusion_depth, 0.0))
-                        << "\n";
+                summary << "characteristic_b_used: "
+                        << format_number(characteristic_b) << "\n";
+                summary << "k0_b_used: " << format_number(k0 * characteristic_b) << "\n";
                 for (std::size_t i = 0; i < eigen_solution.eigenpairs.size(); ++i) {
                     const GeneralizedEigenpair& eigenpair = eigen_solution.eigenpairs[i];
                     summary << "mode_" << (i + 1) << "_eigenvalue_n_eff_squared: "
@@ -745,7 +879,7 @@ int run_application(int argc, char** argv) {
         write_text_file(results_dir / "neff.csv", build_neff_csv(eigen_solution));
         write_text_file(results_dir / "dispersion_curve_points.csv",
                         build_dispersion_curve_points_csv(
-                            eigen_solution, config.diffusion_depth, k0));
+                            eigen_solution, characteristic_b, k0));
         write_text_file(results_dir / "modal_summary.csv",
                         build_neff_csv(eigen_solution));
 
@@ -805,7 +939,7 @@ int run_application(int argc, char** argv) {
         }
         std::cout << "  material      : " << config.material_model << "\n";
         std::cout << "  output folder : " << output_dir.string() << "\n";
-        std::cout << "  note          : dense global solver active for constant and planar diffuse isotropic cases\n";
+        std::cout << "  note          : dense global solver active for constant, planar diffuse, and rectangular channel isotropic cases\n";
 
         return 0;
     } catch (const std::exception& error) {
