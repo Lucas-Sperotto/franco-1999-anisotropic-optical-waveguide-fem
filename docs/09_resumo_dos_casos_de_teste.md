@@ -44,6 +44,12 @@ $$
 \frac{n_{\mathrm{eff}}^2 - n_2^2}{n_3^2 - n_2^2}.
 $$
 
+**Domínio e contorno usados na reprodução atual.**
+
+- domínio de referência para comparação com a Fig. 1: `x in [-10, 10]` e `y in [-6, 14]`;
+- domínio de controle adicional (sensibilidade ao truncamento): `x in [-5, 5]` e `y in [-3, 7]`;
+- condição de contorno usada no solver: `boundary.condition: dirichlet_zero_on_boundary_nodes`, isto é, Dirichlet homogênea em toda a fronteira externa da malha.
+
 **Saídas esperadas.**
 
 - curva de dispersão do modo fundamental $E^x$;
@@ -52,7 +58,7 @@ $$
 
 **Papel na validação.** Este é o teste de consistência inicial. Ele deve validar montagem matricial, extração modal e normalização de resultados antes de qualquer perfil difuso.
 
-**Observação editorial.** A legenda usa $b$ como dimensão de referência na frequência normalizada, mas a geometria detalhada não é reescrita integralmente nesta seção. Na etapa de codificação, vale conferir a figura original do artigo para parametrizar esse valor com segurança.
+**Observação editorial.** As referências [7] e [19] usam variações de notação para índices e eixos. Na implementação atual do repositório, a convenção adotada no Caso 1 permanece $n_1 = 1.0$, $n_2 = 1.43$, $n_3 = 1.50$, com hipótese geométrica inicial `a = 2b` e `b = 1`.
 
 ## Caso 2: guia de onda planar difuso isotrópico
 
@@ -63,20 +69,29 @@ Corresponde à seção [04](04_guia_de_onda_planar_difuso_isotropico.md) e à Fi
 **Entradas principais.**
 
 - geometria planar;
-- profundidade de difusão $b$;
-- perfil
+- profundidade de difusão $d$;
+- cobertura homogênea para $y < 0$;
+- perfil exponencial no substrato para $y \ge 0$;
+- solução de referência analítica TE de [19];
+- parâmetro de varredura no eixo horizontal dado por $k_0 d$.
 
 $$
-n(y) = 2.20 + 0.01 \exp\left(-\frac{|y|}{b}\right);
+n(y) = n_s + \Delta n \exp\left(-\frac{y}{d}\right), \qquad y \ge 0.
 $$
 
 - cálculo dos três modos $E^x$ de menor ordem.
+
+**Domínio e contorno usados na reprodução atual.**
+
+- domínio numérico da malha planar de referência: `x in [-5, 5]` e `y in [-2, 8]` (total `10 x 10`);
+- condição de contorno usada no solver: `boundary.condition: dirichlet_zero_on_y_extrema`, com Dirichlet homogênea nos níveis `y_min` e `y_max`;
+- redução planar ativa: `solver.planar_x_invariant_reduction: true`, mantendo um único grau de liberdade por nível de profundidade e removendo dependência lateral artificial em `x` no benchmark planar.
 
 **Saídas esperadas.**
 
 - índices efetivos dos três modos de menor ordem;
 - curvas de dispersão;
-- comparação com soluções exatas e numéricas de referência.
+- comparação com solução exata de referência.
 
 **Papel na validação.** Este é o primeiro caso em que a discretização precisa lidar com coeficientes materiais variáveis no domínio, mas ainda sem a complexidade geométrica completa dos guias de canal.
 

@@ -125,6 +125,13 @@ int main() {
                 constant_mesh,
                 waveguide::make_homogeneous_isotropic_global_material(constant_mesh, 2.2),
                 local_options);
+        const waveguide::GlobalAssemblyResult constant_natural =
+            waveguide::assemble_global_homogeneous_isotropic_system(
+                constant_mesh,
+                2.2,
+                local_options,
+                "natural_zero_flux_on_boundary",
+                false);
 
         expect_true(constant_wrapper.node_count == 5, "unexpected node count");
         expect_true(constant_wrapper.element_count == 4, "unexpected element count");
@@ -134,6 +141,11 @@ int main() {
                     "unexpected number of interior nodes");
         expect_true(constant_wrapper.boundary_condition.free_node_ids.front() == 5,
                     "expected the center node to remain free");
+        expect_true(constant_natural.boundary_condition.constrained_node_ids.empty(),
+                    "natural boundary should not constrain nodes");
+        expect_true(constant_natural.boundary_condition.free_node_ids.size() ==
+                        constant_mesh.nodes.size(),
+                    "natural boundary should keep all nodes free");
 
         expect_true(constant_wrapper.matrices.M_full.size() == 5,
                     "unexpected full M dimension");

@@ -28,6 +28,14 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional CSV with approximate Fig. 1 points. Defaults to the consolidated copy when present.",
     )
+    parser.add_argument(
+        "--marcatili-reference",
+        default=None,
+        help=(
+            "Optional CSV with the adapted Marcatili Ex11 reference. "
+            "Defaults to consolidated/marcatili_ex11_reference.csv when present."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -106,6 +114,20 @@ def main() -> None:
         read_csv_rows(reference_points_path) if reference_points_path and reference_points_path.exists() else []
     )
 
+    marcatili_reference_path = None
+    if args.marcatili_reference is not None:
+        marcatili_reference_path = Path(args.marcatili_reference).resolve()
+    else:
+        candidate = consolidated_dir / "marcatili_ex11_reference.csv"
+        if candidate.exists():
+            marcatili_reference_path = candidate
+
+    marcatili_reference_rows = (
+        read_csv_rows(marcatili_reference_path)
+        if marcatili_reference_path and marcatili_reference_path.exists()
+        else []
+    )
+
     fem_points = [
         (float(row["normalized_frequency"]), float(row["normalized_beta"]))
         for row in reference_rows
@@ -120,6 +142,20 @@ def main() -> None:
         for row in external_reference_rows
     ]
     external_points.sort()
+
+    marcatili_exact_points = [
+        (float(row["normalized_frequency"]), float(row["normalized_beta"]))
+        for row in marcatili_reference_rows
+        if row["solver_model"] == "exact"
+    ]
+    marcatili_exact_points.sort()
+
+    marcatili_closed_form_points = [
+        (float(row["normalized_frequency"]), float(row["normalized_beta"]))
+        for row in marcatili_reference_rows
+        if row["solver_model"] == "closed_form"
+    ]
+    marcatili_closed_form_points.sort()
 
     width = 920
     height = 600
@@ -170,6 +206,38 @@ def main() -> None:
             f'<text x="{plot_right - 162}" y="{plot_top + 26}" font-size="13" font-family="Arial">FEM Ex-like</text>'
         )
 
+    if marcatili_exact_points:
+        polyline_points = []
+        for x_value, y_value in marcatili_exact_points:
+            x_pixel = map_value(x_value, FIG1_X_MIN, FIG1_X_MAX, plot_left, plot_right)
+            y_pixel = map_value(y_value, FIG1_Y_MIN, FIG1_Y_MAX, plot_bottom, plot_top)
+            polyline_points.append((x_pixel, y_pixel))
+        svg_parts.append(
+            f'<polyline fill="none" stroke="#111111" stroke-width="2.0" points="{build_polyline(polyline_points)}"/>'
+        )
+        svg_parts.append(
+            f'<line x1="{plot_right - 210}" y1="{plot_top + 48}" x2="{plot_right - 176}" y2="{plot_top + 48}" stroke="#111111" stroke-width="2.0"/>'
+        )
+        svg_parts.append(
+            f'<text x="{plot_right - 162}" y="{plot_top + 52}" font-size="13" font-family="Arial">Marcatili exact Ex11</text>'
+        )
+
+    if marcatili_closed_form_points:
+        polyline_points = []
+        for x_value, y_value in marcatili_closed_form_points:
+            x_pixel = map_value(x_value, FIG1_X_MIN, FIG1_X_MAX, plot_left, plot_right)
+            y_pixel = map_value(y_value, FIG1_Y_MIN, FIG1_Y_MAX, plot_bottom, plot_top)
+            polyline_points.append((x_pixel, y_pixel))
+        svg_parts.append(
+            f'<polyline fill="none" stroke="#444444" stroke-width="2.0" stroke-dasharray="8 6" points="{build_polyline(polyline_points)}"/>'
+        )
+        svg_parts.append(
+            f'<line x1="{plot_right - 210}" y1="{plot_top + 74}" x2="{plot_right - 176}" y2="{plot_top + 74}" stroke="#444444" stroke-width="2.0" stroke-dasharray="8 6"/>'
+        )
+        svg_parts.append(
+            f'<text x="{plot_right - 162}" y="{plot_top + 78}" font-size="13" font-family="Arial">Marcatili closed-form Ex11</text>'
+        )
+
     if external_points:
         for x_value, y_value in external_points:
             x_pixel = map_value(x_value, FIG1_X_MIN, FIG1_X_MAX, plot_left, plot_right)
@@ -178,15 +246,15 @@ def main() -> None:
                 f'<circle cx="{x_pixel:.2f}" cy="{y_pixel:.2f}" r="4.0" fill="#ffffff" stroke="#c23b22" stroke-width="1.8"/>'
             )
         svg_parts.append(
-            f'<circle cx="{plot_right - 193:.2f}" cy="{plot_top + 48:.2f}" r="4.0" fill="#ffffff" stroke="#c23b22" stroke-width="1.8"/>'
+            f'<circle cx="{plot_right - 193:.2f}" cy="{plot_top + 100:.2f}" r="4.0" fill="#ffffff" stroke="#c23b22" stroke-width="1.8"/>'
         )
         svg_parts.append(
-            f'<text x="{plot_right - 162}" y="{plot_top + 52}" font-size="13" font-family="Arial">Figura 1 (aproximado)</text>'
+            f'<text x="{plot_right - 162}" y="{plot_top + 104}" font-size="13" font-family="Arial">Figura 1 (aproximado)</text>'
         )
 
     footer_text = (
-        "Linha contínua: FEM. Círculos vazados só aparecem quando houver pontos aproximados "
-        "da figura disponíveis no diretório consolidado."
+        "FEM em azul; Marcatili exact em preto; Marcatili closed-form em preto tracejado; "
+        "círculos vazados mostram a digitalização visual aproximada da figura quando disponível."
     )
     svg_parts.append(
         f'<text x="{plot_left}" y="{height - 46}" font-size="12" fill="#666" font-family="Arial">{footer_text}</text>'

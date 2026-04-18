@@ -17,8 +17,8 @@ MODE_COLORS = {
 
 FIG2_X_MIN = 0.0
 FIG2_X_MAX = 150.0
-FIG2_Y_MIN = 2.200
-FIG2_Y_MAX = 2.210
+FIG2_Y_MIN = 2.198
+FIG2_Y_MAX = 2.208
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,11 +29,6 @@ def parse_args() -> argparse.Namespace:
         "--sweep-root",
         required=True,
         help="Sweep root produced by scripts/run_planar_diffuse_sweep.py",
-    )
-    parser.add_argument(
-        "--reference-points",
-        default=None,
-        help="Optional CSV with approximate Fig. 2 points. Defaults to the consolidated copy.",
     )
     return parser.parse_args()
 
@@ -86,9 +81,11 @@ def append_plot_frame(
     svg_parts.extend(
         [
             f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">',
-            f'<rect x="0" y="0" width="{width}" height="{height}" fill="#ffffff"/>',
-            f'<text x="{width / 2:.1f}" y="28" text-anchor="middle" font-size="21" font-family="Arial">{title}</text>',
-            f'<text x="{width / 2:.1f}" y="50" text-anchor="middle" font-size="13" fill="#555" font-family="Arial">{subtitle}</text>',
+            f'<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="#f7f9fc"/></linearGradient></defs>',
+            f'<rect x="0" y="0" width="{width}" height="{height}" fill="url(#bg)"/>',
+            f'<text x="{width / 2:.1f}" y="30" text-anchor="middle" font-size="21" font-family="Arial">{title}</text>',
+            f'<text x="{width / 2:.1f}" y="52" text-anchor="middle" font-size="13" fill="#4d5b6b" font-family="Arial">{subtitle}</text>',
+            f'<rect x="{plot_left - 1}" y="{plot_top - 1}" width="{plot_right - plot_left + 2}" height="{plot_bottom - plot_top + 2}" fill="#ffffff" stroke="#d6dbe4" stroke-width="1"/>',
             f'<line x1="{plot_left}" y1="{plot_bottom}" x2="{plot_right}" y2="{plot_bottom}" stroke="#333" stroke-width="1.5"/>',
             f'<line x1="{plot_left}" y1="{plot_bottom}" x2="{plot_left}" y2="{plot_top}" stroke="#333" stroke-width="1.5"/>',
             f'<text x="{width / 2:.1f}" y="{height - 20}" text-anchor="middle" font-size="16" font-family="Arial">{x_label}</text>',
@@ -141,11 +138,10 @@ def append_grid_and_ticks(
 def generate_reference_dispersion_svg(
     reference_rows: list[dict[str, str]],
     analytic_reference_rows: list[dict[str, str]],
-    external_reference_rows: list[dict[str, str]],
     output_path: Path,
 ) -> None:
-    width = 920
-    height = 600
+    width = 960
+    height = 620
     left = 90
     right = 50
     top = 78
@@ -157,17 +153,11 @@ def generate_reference_dispersion_svg(
             continue
         grouped[row["mode_label"]].append((float(row["k0_b"]), float(row["neff"])))
 
-    external_grouped: defaultdict[str, list[tuple[float, float]]] = defaultdict(list)
-    for row in external_reference_rows:
-        external_grouped[row["mode_label"]].append((float(row["k0_b"]), float(row["neff"])))
-
     analytic_grouped: defaultdict[str, list[tuple[float, float]]] = defaultdict(list)
     for row in analytic_reference_rows:
         analytic_grouped[row["mode_label"]].append((float(row["k0_b"]), float(row["neff"])))
 
     for points in grouped.values():
-        points.sort()
-    for points in external_grouped.values():
         points.sort()
     for points in analytic_grouped.values():
         points.sort()
@@ -182,7 +172,7 @@ def generate_reference_dispersion_svg(
         top=top,
         bottom=bottom,
         title="Caso 2 - Curva de dispersão comparável à Fig. 2",
-        subtitle="Comparação preliminar entre FEM, pontos aproximados da figura e solução TE exata do artigo [6-19]; ainda não é validação final.",
+        subtitle="Comparação preliminar FEM vs. solução TE exata do artigo [6-19]; não é validação final.",
         x_label="k0 b",
         y_label="n_eff",
     )
@@ -194,7 +184,7 @@ def generate_reference_dispersion_svg(
         plot_top=plot_top,
         plot_bottom=plot_bottom,
         x_values=[0.0, 30.0, 60.0, 90.0, 120.0, 150.0],
-        y_values=[2.200, 2.202, 2.204, 2.206, 2.208, 2.210],
+        y_values=[2.198, 2.200, 2.202, 2.204, 2.206, 2.208],
         x_min=FIG2_X_MIN,
         x_max=FIG2_X_MAX,
         y_min=FIG2_Y_MIN,
@@ -247,24 +237,8 @@ def generate_reference_dispersion_svg(
             )
             legend_y += 24
 
-        reference_points = external_grouped.get(mode_label, [])
-        for x_value, y_value in reference_points:
-            x_pixel = map_value(x_value, FIG2_X_MIN, FIG2_X_MAX, plot_left, plot_right)
-            y_pixel = map_value(y_value, FIG2_Y_MIN, FIG2_Y_MAX, plot_bottom, plot_top)
-            svg_parts.append(
-                f'<circle cx="{x_pixel:.2f}" cy="{y_pixel:.2f}" r="4.0" fill="#ffffff" stroke="{color}" stroke-width="1.8"/>'
-            )
-        if reference_points:
-            svg_parts.append(
-                f'<circle cx="{plot_right - 104:.2f}" cy="{legend_y - 4:.2f}" r="4.0" fill="#ffffff" stroke="{color}" stroke-width="1.8"/>'
-            )
-            svg_parts.append(
-                f'<text x="{plot_right - 76}" y="{legend_y}" font-size="13" font-family="Arial">{mode_label} figura</text>'
-            )
-            legend_y += 24
-
     svg_parts.append(
-        f'<text x="{plot_left}" y="{height - 46}" font-size="12" fill="#666" font-family="Arial">Linha contínua e pontos cheios: FEM. Linha tracejada e quadrados vazados: solução TE exata de [6-19]. Círculos vazados: pontos aproximados da figura.</text>'
+        f'<text x="{plot_left}" y="{height - 46}" font-size="12" fill="#566173" font-family="Arial">Linha contínua e pontos cheios: FEM. Linha tracejada e quadrados vazados: solução TE exata de [6-19].</text>'
     )
     svg_parts.append("</svg>")
     write_svg(output_path, "\n".join(svg_parts))
@@ -370,19 +344,10 @@ def main() -> None:
     consolidated_rows = read_csv_rows(consolidated_dir / "consolidated_modes.csv")
     reference_rows = read_csv_rows(consolidated_dir / "reference_dispersion.csv")
     analytic_reference_rows = read_csv_rows(consolidated_dir / "analytic_reference.csv")
-    if args.reference_points is None:
-        reference_points_path = consolidated_dir / "fig2_reference_points.csv"
-    else:
-        reference_points_path = Path(args.reference_points)
-        if not reference_points_path.is_absolute():
-            reference_points_path = Path(__file__).resolve().parents[1] / reference_points_path
-        reference_points_path = reference_points_path.resolve()
-    external_reference_rows = read_csv_rows(reference_points_path)
 
     generate_reference_dispersion_svg(
         reference_rows,
         analytic_reference_rows,
-        external_reference_rows,
         plots_dir / "fig2_like_reference.svg",
     )
     generate_mode1_sensitivity_svg(

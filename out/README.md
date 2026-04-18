@@ -28,8 +28,8 @@ Para o sweep do Caso 2, a pasta `out/planar_diffuse_sweep/<run_label>/` passa a 
 - `generated_cases/`: arquivos YAML temporários gerados para cada ponto do sweep;
 - `points/`: uma execução completa do solver por estudo geométrico e por valor de `b`;
 - `study_manifest.csv` e `point_manifest.csv`: índices rastreáveis do sweep;
-- `consolidated/`: CSVs consolidados com `b`, `k0`, `k0_b`, `n_eff`, identificação modal `TE0/TE1/TE2`, disponibilidade modal e sensibilidade numérica;
-- `plots/`: gráficos SVG produzidos a partir da consolidação, incluindo a curva preliminar comparável à Fig. 2 em eixos `k0 b` versus `n_eff`.
+- `consolidated/`: CSVs consolidados com `b`, `k0`, `k0_b`, `n_eff`, identificação modal `TE0/TE1/TE2`, disponibilidade modal, referência analítica e comparação `FEM vs exato`;
+- `plots/`: gráficos SVG produzidos a partir da consolidação, incluindo a curva preliminar comparável à Fig. 2 em eixos `k0 b` versus `n_eff`, com sobreposição apenas de `FEM` e referência analítica.
 
 Para o sweep do Caso 1, a pasta `out/case1_homogeneous_channel/<run_label>/` passa a conter:
 

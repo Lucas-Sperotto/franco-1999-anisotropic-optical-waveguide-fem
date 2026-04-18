@@ -195,6 +195,13 @@ std::vector<int> detect_dirichlet_node_ids(const Mesh& mesh,
         return detect_y_extrema_node_ids(mesh);
     }
 
+    if (boundary_label == "natural_zero_flux_on_boundary" ||
+        boundary_label == "open_boundary_natural") {
+        // Open-boundary surrogate: keep all external nodes as free dofs so the
+        // weak form remains with natural (zero normal flux) boundary treatment.
+        return {};
+    }
+
     throw std::runtime_error("Unsupported boundary label in global assembly: " +
                              boundary_label);
 }

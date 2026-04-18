@@ -20,11 +20,8 @@ def main() -> int:
         sweep_root / "point_manifest.csv",
         sweep_root / "consolidated" / "consolidated_modes.csv",
         sweep_root / "consolidated" / "reference_dispersion.csv",
-        sweep_root / "consolidated" / "fig2_reference_points.csv",
         sweep_root / "consolidated" / "analytic_reference.csv",
-        sweep_root / "consolidated" / "reference_comparison.csv",
         sweep_root / "consolidated" / "fem_vs_exact_comparison.csv",
-        sweep_root / "consolidated" / "exact_vs_reference_points.csv",
         sweep_root / "consolidated" / "reference_error_summary.csv",
         sweep_root / "consolidated" / "availability_summary.csv",
         sweep_root / "plots" / "fig2_like_reference.svg",
@@ -99,23 +96,23 @@ def main() -> int:
             "No sweep point reported the simultaneous availability of modes 1, 2 and 3"
         )
 
-    with (sweep_root / "consolidated" / "reference_comparison.csv").open(
+    with (sweep_root / "consolidated" / "fem_vs_exact_comparison.csv").open(
         "r", encoding="utf-8", newline=""
     ) as stream:
         comparison_rows = list(csv.DictReader(stream))
 
     if not comparison_rows:
-        raise SystemExit("The sweep did not generate any reference-vs-computed comparison rows")
+        raise SystemExit("The sweep did not generate any FEM-vs-exact comparison rows")
 
     comparison_labels = {row["mode_label"] for row in comparison_rows}
     if not {"TE0", "TE1", "TE2"}.issubset(comparison_labels):
         raise SystemExit(
-            "The reference comparison output does not cover TE0, TE1 and TE2"
+            "The FEM-vs-exact comparison output does not cover TE0, TE1 and TE2"
         )
 
     if not any(row["absolute_relative_error_percent"] for row in comparison_rows):
         raise SystemExit(
-            "The reference comparison output does not expose absolute relative error percentages"
+            "The FEM-vs-exact comparison output does not expose absolute relative error percentages"
         )
 
     with (sweep_root / "consolidated" / "analytic_reference.csv").open(

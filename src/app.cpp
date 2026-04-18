@@ -13,6 +13,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -345,6 +346,147 @@ std::string build_nodal_material_fields_csv(const Mesh& mesh,
                << format_number(node.point.y) << "," << format_number(nx2) << ","
                << format_number(nz2) << "," << format_number(gz2) << ","
                << format_number(std::sqrt(std::max(nx2, 0.0))) << "\n";
+    }
+    return stream.str();
+}
+
+struct ModeConfinementDiagnostics {
+    bool available = false;
+    double core_energy = 0.0;
+    double total_energy = 0.0;
+    double core_energy_fraction = 0.0;
+};
+
+DenseVector expand_reduced_mode_to_assembled_dofs(
+    const DenseVector& reduced_mode,
+    const GlobalAssemblyResult& global_assembly) {
+    const std::vector<std::size_t>& free_dofs =
+        global_assembly.boundary_condition.free_dof_indices;
+    if (reduced_mode.size() != free_dofs.size()) {
+        return {};
+    }
+
+    DenseVector assembled_mode(global_assembly.assembled_dof_count, 0.0);
+    for (std::size_t i = 0; i < free_dofs.size(); ++i) {
+        assembled_mode[free_dofs[i]] = reduced_mode[i];
+    }
+    return assembled_mode;
+}
+
+bool is_point_inside_rectangular_core(const Point2D& point, const CaseConfig& config) {
+    constexpr double kTolerance = 1.0e-12;
+    const double half_width = 0.5 * config.core_width;
+    return point.x >= config.core_center_x - half_width - kTolerance &&
+           point.x <= config.core_center_x + half_width + kTolerance &&
+           point.y >= config.surface_y - kTolerance &&
+           point.y <= config.surface_y + config.core_height + kTolerance;
+}
+
+bool is_triangle_centroid_inside_rectangular_core(
+    const TriangleGeometry& triangle_geometry,
+    const CaseConfig& config) {
+    const Point2D centroid{
+        (triangle_geometry.vertices[0].x + triangle_geometry.vertices[1].x +
+         triangle_geometry.vertices[2].x) /
+            3.0,
+        (triangle_geometry.vertices[0].y + triangle_geometry.vertices[1].y +
+         triangle_geometry.vertices[2].y) /
+            3.0,
+    };
+    return is_point_inside_rectangular_core(centroid, config);
+}
+
+ModeConfinementDiagnostics compute_rectangular_core_mode_confinement(
+    const Mesh& mesh,
+    const CaseConfig& config,
+    const GlobalAssemblyResult& global_assembly,
+    const DenseVector& reduced_mode) {
+    ModeConfinementDiagnostics diagnostics;
+    const DenseVector assembled_mode =
+        expand_reduced_mode_to_assembled_dofs(reduced_mode, global_assembly);
+    if (assembled_mode.empty()) {
+        return diagnostics;
+    }
+
+    double total_energy = 0.0;
+    double core_energy = 0.0;
+    for (const TriangleElement& triangle : mesh.triangles) {
+        const LinearTriangleP1Element element = mesh.make_p1_element(triangle);
+        const LocalMatrix3 local_mass = make_consistent_mass_integral_matrix(element);
+        std::array<double, 3> nodal_mode{};
+        for (std::size_t i = 0; i < triangle.node_ids.size(); ++i) {
+            const std::size_t dof_index =
+                global_assembly.node_id_to_dof.at(triangle.node_ids[i]);
+            nodal_mode[i] = assembled_mode[dof_index];
+        }
+
+        double element_energy = 0.0;
+        for (std::size_t i = 0; i < nodal_mode.size(); ++i) {
+            for (std::size_t j = 0; j < nodal_mode.size(); ++j) {
+                element_energy += nodal_mode[i] * local_mass[i][j] * nodal_mode[j];
+            }
+        }
+        element_energy = std::max(0.0, element_energy);
+        total_energy += element_energy;
+        if (is_triangle_centroid_inside_rectangular_core(element.geometry, config)) {
+            core_energy += element_energy;
+        }
+    }
+
+    diagnostics.available = true;
+    diagnostics.core_energy = core_energy;
+    diagnostics.total_energy = total_energy;
+    diagnostics.core_energy_fraction =
+        total_energy > 0.0 ? (core_energy / total_energy) : 0.0;
+    return diagnostics;
+}
+
+std::string build_modal_metrics_csv(const GeneralizedEigenSolution& solution,
+                                    const Mesh& mesh,
+                                    const GlobalAssemblyResult& global_assembly,
+                                    const CaseConfig& config) {
+    std::ostringstream stream;
+    stream << "mode_index,mode_label,eigenvalue_n_eff_squared,neff,beta,status,guided_by_index,"
+              "core_energy_fraction,core_energy_in_core,core_energy_total\n";
+
+    const bool rectangular_channel_case =
+        config.material_model == "rectangular_channel_step_index";
+    for (std::size_t i = 0; i < solution.eigenpairs.size(); ++i) {
+        const GeneralizedEigenpair& eigenpair = solution.eigenpairs[i];
+        const std::size_t mode_index = i + 1;
+        stream << mode_index << "," << mode_index_to_label(mode_index) << ","
+               << format_number(eigenpair.eigenvalue) << ",";
+
+        const bool mode_ok = eigenpair.has_neff;
+        if (mode_ok) {
+            stream << format_number(eigenpair.n_eff) << ","
+                   << format_number(eigenpair.beta) << ",ok,";
+            const bool guided_by_index =
+                rectangular_channel_case &&
+                eigenpair.n_eff > config.substrate_index &&
+                eigenpair.n_eff < config.core_index;
+            stream << (guided_by_index ? "yes" : "no") << ",";
+
+            const ModeConfinementDiagnostics diagnostics =
+                rectangular_channel_case
+                    ? compute_rectangular_core_mode_confinement(
+                          mesh,
+                          config,
+                          global_assembly,
+                          eigenpair.reduced_mode)
+                    : ModeConfinementDiagnostics{};
+            if (diagnostics.available) {
+                stream << format_number(diagnostics.core_energy_fraction) << ","
+                       << format_number(diagnostics.core_energy) << ","
+                       << format_number(diagnostics.total_energy);
+            } else {
+                stream << ",,";
+            }
+            stream << "\n";
+            continue;
+        }
+
+        stream << ",,not_applicable,n/a,,,\n";
     }
     return stream.str();
 }
@@ -882,6 +1024,12 @@ int run_application(int argc, char** argv) {
                             eigen_solution, characteristic_b, k0));
         write_text_file(results_dir / "modal_summary.csv",
                         build_neff_csv(eigen_solution));
+        write_text_file(results_dir / "modal_metrics.csv",
+                        build_modal_metrics_csv(
+                            eigen_solution,
+                            mesh,
+                            global_assembly,
+                            config));
 
         write_text_file(
             results_dir / "README.txt",

@@ -76,6 +76,24 @@ Na malha de referência, a discretização é fortemente refinada nas vizinhanç
 
 Além disso, o caso ativa no solver uma **redução global $x$-invariante**, de modo que todos os nós em um mesmo nível de $y$ compartilham o mesmo grau de liberdade modal. Isso é importante porque elimina famílias artificiais de modos laterais num problema cuja física, neste benchmark, depende apenas da profundidade.
 
+## Domínio e condições de contorno no Caso 2
+
+Domínio adotado na reprodução de referência:
+
+- malha planar de referência: [../meshes/planar_d10_a2b_reference.mesh](../meshes/planar_d10_a2b_reference.mesh);
+- extensão geométrica: `x in [-5, 5]` e `y in [-2, 8]`;
+- interpretação física: variação material apenas em `y`, com `x` usado como suporte numérico da integração local.
+
+Condições de contorno impostas:
+
+- etiqueta no caso YAML: `boundary.condition: dirichlet_zero_on_y_extrema`;
+- redução planar ativa: `solver.planar_x_invariant_reduction: true`;
+- efeito combinado no solver: imposição de Dirichlet homogênea apenas nos níveis de profundidade extremos (`y = -2` e `y = 8`), sem impor contorno lateral independente em `x`.
+
+Arquivo base da execução:
+
+- [../cases/planar_diffuse_isotropic_case.yaml](../cases/planar_diffuse_isotropic_case.yaml)
+
 ## Configuração usada no repositório
 
 Os arquivos principais da reprodução atual são:
@@ -90,10 +108,6 @@ O sweep de referência é feito nos 11 pontos:
 $$
 k_0 d \in \{5, 10, 15, 20, 30, 40, 50, 70, 90, 110, 150\}.
 $$
-
-Os valores extraídos da figura do artigo e usados como referência gráfica estão em:
-
-- [../cases/planar_diffuse_isotropic_fig2_reference_points.csv](../cases/planar_diffuse_isotropic_fig2_reference_points.csv)
 
 ## Como reproduzir o cálculo
 
@@ -124,7 +138,6 @@ python3 scripts/plot_planar_diffuse_sweep.py --sweep-root out/planar_diffuse_swe
 Artefatos principais:
 
 - gráfico comparativo final: [../out/planar_diffuse_sweep/case2_exact_refined/plots/fig2_like_reference.svg](../out/planar_diffuse_sweep/case2_exact_refined/plots/fig2_like_reference.svg)
-- comparação FEM vs. pontos aproximados da figura: [../out/planar_diffuse_sweep/case2_exact_refined/consolidated/reference_comparison.csv](../out/planar_diffuse_sweep/case2_exact_refined/consolidated/reference_comparison.csv)
 - benchmark exato TE: [../out/planar_diffuse_sweep/case2_exact_refined/consolidated/analytic_reference.csv](../out/planar_diffuse_sweep/case2_exact_refined/consolidated/analytic_reference.csv)
 - comparação FEM vs. solução exata: [../out/planar_diffuse_sweep/case2_exact_refined/consolidated/fem_vs_exact_comparison.csv](../out/planar_diffuse_sweep/case2_exact_refined/consolidated/fem_vs_exact_comparison.csv)
 
@@ -181,7 +194,7 @@ Mantém-se abaixo a figura documental já utilizada na pasta `docs`, agora compl
 
 ![Figura 2 - Curvas de dispersão para guia de onda óptico planar difuso isotrópico.](img/fig_2.png)
 
-O gráfico gerado automaticamente pelo repositório, já com a sobreposição entre FEM, pontos aproximados da figura e solução exata de [19], está em:
+O gráfico gerado automaticamente pelo repositório, com a sobreposição entre FEM e solução exata de [19], está em:
 
 - [../out/planar_diffuse_sweep/case2_exact_refined/plots/fig2_like_reference.svg](../out/planar_diffuse_sweep/case2_exact_refined/plots/fig2_like_reference.svg)
 
@@ -248,7 +261,7 @@ Como o benchmark analítico também respeita o cutoff modal, as tabelas incluem 
 - A reprodução numérica atual do repositório ficou consistente com o benchmark analítico de [19] na ordem de $10^{-4}$ em $n_{\mathrm{eff}}$.
 - Em relação à solução exata implementada no repositório, os maiores desvios absolutos observados nesta rodada foram de aproximadamente `0.000060` para `TE0`, `0.000027` para `TE1` e `0.000072` para `TE2`.
 - Em termos percentuais relativos à referência analítica, isso corresponde a erros máximos de aproximadamente `0.002721%` para `TE0`, `0.001226%` para `TE1` e `0.003265%` para `TE2`.
-- Os pontos aproximados da figura do artigo continuam úteis como verificação visual, mas a referência técnica principal do Caso 2 passa a ser a solução analítica de [19], que é mais apropriada para avaliar a qualidade do FEM.
+- Nesta etapa, a referência técnica do Caso 2 é exclusivamente a solução analítica de [19], adotada como base principal para avaliar a qualidade do FEM.
 
 Em termos didáticos, este caso cumpre exatamente o papel esperado dentro da sequência de validação: ele confirma a montagem local e global em um problema com perfil material variável, mas ainda suficientemente simples para admitir uma verificação analítica independente.
 

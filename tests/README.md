@@ -16,7 +16,7 @@ Nesta fase, o projeto já expõe dezessete testes simples via `ctest`:
 - `waveguide_planar_sweep_smoke`: executa um sweep reduzido do Caso 2 com a malha planar de referência.
 - `waveguide_planar_sweep_consolidate`: consolida os pontos do sweep em CSV rastreáveis, já com `b`, `k0`, `k0_b`, rótulos `TE0/TE1/TE2` e a referência analítica TE de [6-19].
 - `waveguide_planar_sweep_plot`: gera os gráficos SVG do sweep consolidado com o mesmo par de grandezas da Fig. 2.
-- `waveguide_planar_sweep_artifacts`: garante a presença dos arquivos consolidados e dos três modos mais baixos quando disponíveis, tanto por índice modal quanto por rótulo `TE0/TE1/TE2`, além da consistência da hipótese atual `b = 1` usada para o Caso 2, da comparação preliminar com pontos externos da Fig. 2, da geração da referência analítica e do cálculo do erro relativo percentual.
+- `waveguide_planar_sweep_artifacts`: garante a presença dos arquivos consolidados e dos três modos mais baixos quando disponíveis, tanto por índice modal quanto por rótulo `TE0/TE1/TE2`, além da consistência da hipótese atual `b = 1` usada para o Caso 2, da geração da referência analítica e do cálculo do erro relativo percentual `FEM vs exato`.
 - `waveguide_case1_sweep_smoke`: executa um sweep reduzido do Caso 1 no guia de canal homogêneo.
 - `waveguide_case1_sweep_consolidate`: consolida os pontos do sweep do Caso 1 nas grandezas normalizadas da Fig. 1.
 - `waveguide_case1_sweep_plot`: gera o gráfico SVG preliminar do Caso 1 em frequência normalizada versus constante de propagação normalizada.

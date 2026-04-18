@@ -1,0 +1,33 @@
+{
+  "case_id": "SG-006i",
+  "article_target": "Figure 6i, finite panel sweep for the asymmetric single-guide case using the current repository transcription: n2 = n1/1.5 and n3 = n4 = n5 slightly below n1, with denser sampling near cutoff",
+  "panel_id": "SG-006i",
+  "solver_models": [
+    "closed_form",
+    "exact"
+  ],
+  "wavelength": 1.0e-6,
+  "a_over_b": 2.0,
+  "n1": 1.5,
+  "n2": 1.0,
+  "n3": 1.4851485148514851,
+  "n4": 1.4851485148514851,
+  "n5": 1.4851485148514851,
+  "b_over_A4_min": 0.05,
+  "b_over_A4_max": 4.0,
+  "point_count": 120,
+  "modes": [
+    "E_y:1:1",
+    "E_x:1:1",
+    "E_y:2:1",
+    "E_x:2:1",
+    "E_y:1:2",
+    "E_x:1:2",
+    "E_y:2:2",
+    "E_x:2:2",
+    "E_y:3:1",
+    "E_x:3:1",
+    "E_y:1:3",
+    "E_x:1:3"
+  ]
+}

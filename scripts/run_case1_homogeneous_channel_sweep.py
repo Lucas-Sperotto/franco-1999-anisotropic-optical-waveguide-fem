@@ -22,11 +22,8 @@ class StudyDefinition:
 
 FULL_NORMALIZED_FREQUENCIES = [
     0.8,
-    0.9,
     1.0,
-    1.1,
     1.2,
-    1.3,
     1.4,
     1.6,
     1.8,
@@ -35,17 +32,27 @@ FULL_NORMALIZED_FREQUENCIES = [
     2.4,
     2.6,
     2.8,
+    3.0,
     3.2,
+    3.4,
     3.6,
+    3.8,
     4.0,
 ]
 SMOKE_NORMALIZED_FREQUENCIES = [1.2, 2.0, 4.0]
+DEFAULT_SWEEP_REQUESTED_MODES = 16
 
 FULL_STUDIES = [
     StudyDefinition(
+        "channel_d10_control",
+        "meshes/channel_a2b_b1_reference.mesh",
+        "d10_control",
+        False,
+    ),
+    StudyDefinition(
         "channel_reference",
         "meshes/channel_a2b_b1_farfield.mesh",
-        "reference",
+        "farfield_reference",
         True,
     ),
 ]
@@ -88,6 +95,17 @@ def parse_args() -> argparse.Namespace:
         "--smoke",
         action="store_true",
         help="Run a reduced sweep for automated checks",
+    )
+    parser.add_argument(
+        "--requested-modes",
+        type=int,
+        default=DEFAULT_SWEEP_REQUESTED_MODES,
+        help=(
+            "Number of eigenpairs requested per sweep point. "
+            "This is kept larger than the base case so the consolidation step "
+            "can track the guided fundamental mode instead of blindly taking "
+            "the leading eigenpair."
+        ),
     )
     return parser.parse_args()
 
@@ -159,6 +177,7 @@ def write_case_file(
     study: StudyDefinition,
     normalized_frequency: float,
     wavelength_um: float,
+    requested_modes: int,
     repo_root: Path,
 ) -> None:
     case_id = f"case01_{study.study_id}_v_{format_value_label(normalized_frequency)}"
@@ -186,7 +205,7 @@ boundary:
   condition: {template_entries.get('boundary.condition', 'dirichlet_zero_on_boundary_nodes')}
 
 solver:
-  requested_modes: {template_entries['solver.requested_modes']}
+  requested_modes: {requested_modes}
   wavelength_um: {wavelength_um:.12f}
   planar_x_invariant_reduction: {template_entries.get('solver.planar_x_invariant_reduction', 'false')}
 
@@ -259,6 +278,8 @@ def main() -> None:
     frequencies = (
         SMOKE_NORMALIZED_FREQUENCIES if args.smoke else FULL_NORMALIZED_FREQUENCIES
     )
+    if args.requested_modes <= 0:
+        raise ValueError("--requested-modes must be a positive integer")
     studies = SMOKE_STUDIES if args.smoke else FULL_STUDIES
     core_height = float(template_entries["material.core_height"])
     substrate_index = float(template_entries["material.substrate_index"])
@@ -289,6 +310,7 @@ def main() -> None:
                 "core_height",
                 "substrate_index",
                 "core_index",
+                "requested_modes",
                 "case_file",
                 "output_dir",
                 "run_label",
@@ -313,6 +335,7 @@ def main() -> None:
                     study,
                     normalized_frequency,
                     wavelength_um,
+                    args.requested_modes,
                     repo_root,
                 )
                 shutil.copyfile(case_file, archived_case_file)
@@ -327,6 +350,7 @@ def main() -> None:
                         f"{core_height:.6f}",
                         f"{substrate_index:.6f}",
                         f"{core_index:.6f}",
+                        str(args.requested_modes),
                         str(archived_case_file),
                         str(point_output_dir),
                         run_label,
@@ -339,12 +363,14 @@ def main() -> None:
                 "case: Case 1 homogeneous isotropic channel guide",
                 "status: preliminary FEM sweep for the fundamental Ex-like mode",
                 "assumption_geometry: a = 2b with b = 1.0 and a = 2.0",
+                "control_domain: x in [-5, 5], y in [-3, 7]",
                 "reference_domain: x in [-10, 10], y in [-6, 14]",
                 "smoke_domain: x in [-5, 5], y in [-3, 7]",
                 "normalization_frequency: V = (k0 * b / pi) * sqrt(n3^2 - n2^2)",
                 "normalization_beta: B = (n_eff^2 - n2^2) / (n3^2 - n2^2)",
+                f"requested_modes_per_point: {args.requested_modes}",
                 f"point_count: {len(frequencies)}",
-                "reference_note: the figure overlay is pending until reference values are supplied or extracted.",
+                "reference_note: external Fig. 1 approximate points are provided in cases/homogeneous_channel_fig1_reference_points.csv.",
             ]
         )
         + "\n",

@@ -19,6 +19,14 @@ MODE_LABELS = {
     3: "TE2",
 }
 
+# Cutoff gate used in the Case 2 plotting pipeline so that the low-order curves
+# are shown only after their expected onset in the sampled k0*b grid.
+MIN_K0_B_BY_MODE_LABEL = {
+    "TE0": 5.0,
+    "TE1": 10.0,
+    "TE2": 15.0,
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -28,11 +36,6 @@ def parse_args() -> argparse.Namespace:
         "--sweep-root",
         required=True,
         help="Sweep root produced by scripts/run_planar_diffuse_sweep.py",
-    )
-    parser.add_argument(
-        "--reference-points",
-        default="cases/planar_diffuse_isotropic_fig2_reference_points.csv",
-        help="CSV with approximate Fig. 2 reference points to compare against",
     )
     return parser.parse_args()
 
@@ -64,6 +67,22 @@ def mode_index_to_label(mode_index: int) -> str:
 def read_mode_float(mode_row: dict[str, str], key: str) -> float | None:
     value = mode_row.get(key, "")
     return float(value) if value else None
+
+
+def apply_case2_cutoff_gate(
+    *,
+    solver_status: str,
+    mode_label: str,
+    k0_b_value: float | None,
+) -> str:
+    if solver_status != "ok" or k0_b_value is None:
+        return solver_status
+    minimum_k0_b = MIN_K0_B_BY_MODE_LABEL.get(mode_label)
+    if minimum_k0_b is None:
+        return solver_status
+    if k0_b_value + 1.0e-12 < minimum_k0_b:
+        return "cutoff_expected"
+    return solver_status
 
 
 def trim_copy(value: str) -> str:
@@ -107,11 +126,6 @@ def load_yaml_like_case(case_path: Path) -> dict[str, str]:
 def main() -> None:
     args = parse_args()
     sweep_root = Path(args.sweep_root).resolve()
-    repo_root = Path(__file__).resolve().parents[1]
-    reference_points_path = Path(args.reference_points)
-    if not reference_points_path.is_absolute():
-        reference_points_path = repo_root / reference_points_path
-    reference_points_path = reference_points_path.resolve()
     consolidated_dir = sweep_root / "consolidated"
     consolidated_dir.mkdir(parents=True, exist_ok=True)
 
@@ -130,6 +144,13 @@ def main() -> None:
             b_value = read_mode_float(mode_row, "b")
             k0_value = read_mode_float(mode_row, "k0")
             k0_b_value = read_mode_float(mode_row, "k0_b")
+            mode_label = mode_row.get("mode_label", mode_index_to_label(mode_index))
+            solver_status = mode_row["status"]
+            consolidated_status = apply_case2_cutoff_gate(
+                solver_status=solver_status,
+                mode_label=mode_label,
+                k0_b_value=k0_b_value,
+            )
             point_b = point.get("b", point["diffusion_depth"])
             point_k0 = point.get("k0", "")
             point_k0_b = point.get("k0_b", "")
@@ -143,16 +164,17 @@ def main() -> None:
                 "k0": f"{k0_value:.6f}" if k0_value is not None else point_k0,
                 "k0_b": f"{k0_b_value:.6f}" if k0_b_value is not None else point_k0_b,
                 "mode_index": str(mode_index),
-                "mode_label": mode_row.get("mode_label", mode_index_to_label(mode_index)),
+                "mode_label": mode_label,
                 "eigenvalue_n_eff_squared": mode_row["eigenvalue_n_eff_squared"],
                 "neff": mode_row["neff"],
                 "beta": mode_row["beta"],
-                "status": mode_row["status"],
+                "status": consolidated_status,
+                "solver_status": solver_status,
                 "point_output_dir": point["output_dir"],
             }
             consolidated_rows.append(consolidated_row)
 
-            if mode_row["status"] == "ok":
+            if consolidated_status == "ok":
                 availability[(point["study_id"], consolidated_row["k0_b"])].add(mode_index)
 
     consolidated_rows.sort(
@@ -182,6 +204,7 @@ def main() -> None:
                 "neff",
                 "beta",
                 "status",
+                "solver_status",
                 "point_output_dir",
             ],
         )
@@ -208,6 +231,7 @@ def main() -> None:
                 "neff",
                 "beta",
                 "status",
+                "solver_status",
             ],
         )
         writer.writeheader()
@@ -224,6 +248,7 @@ def main() -> None:
                     "neff": row["neff"],
                     "beta": row["beta"],
                     "status": row["status"],
+                    "solver_status": row["solver_status"],
                 }
             )
 
@@ -246,6 +271,7 @@ def main() -> None:
                 "reference_neff",
                 "delta_neff_vs_reference",
                 "status",
+                "solver_status",
             ]
         )
         for row in consolidated_rows:
@@ -268,6 +294,7 @@ def main() -> None:
                     f"{reference_value:.6f}" if reference_value is not None else "",
                     f"{delta_value:.6f}" if delta_value is not None else "",
                     row["status"],
+                    row["solver_status"],
                 ]
             )
 
@@ -305,35 +332,6 @@ def main() -> None:
                     "yes" if {1, 2, 3}.issubset(available_modes) else "no",
                 ]
             )
-
-    reference_point_rows = read_csv_rows(reference_points_path)
-    normalized_reference_rows: list[dict[str, str]] = []
-    reference_lookup_by_mode: dict[tuple[str, str], dict[str, str]] = {}
-    for row in reference_point_rows:
-        normalized_row = {
-            "mode_label": row["mode_label"],
-            "k0_b": normalize_float_key(row["k0_b"]),
-            "neff": f"{float(row['neff']):.6f}",
-            "source": row.get("source", "external_reference"),
-        }
-        normalized_reference_rows.append(normalized_row)
-        reference_lookup_by_mode[(normalized_row["mode_label"], normalized_row["k0_b"])] = (
-            normalized_row
-        )
-
-    normalized_reference_rows.sort(
-        key=lambda row: (row["mode_label"], float(row["k0_b"]))
-    )
-
-    with (consolidated_dir / "fig2_reference_points.csv").open(
-        "w", encoding="utf-8", newline=""
-    ) as stream:
-        writer = csv.DictWriter(
-            stream,
-            fieldnames=["mode_label", "k0_b", "neff", "source"],
-        )
-        writer.writeheader()
-        writer.writerows(normalized_reference_rows)
 
     case_entries = load_yaml_like_case(Path(point_manifest[0]["case_file"]))
     exact_config = PlanarExactReferenceConfig(
@@ -399,62 +397,6 @@ def main() -> None:
         for row in exact_reference_rows
     }
 
-    reference_comparison_rows: list[dict[str, str]] = []
-    for row in reference_rows:
-        if row["status"] != "ok":
-            continue
-        key = (row["mode_label"], normalize_float_key(row["k0_b"]))
-        reference_match = reference_lookup_by_mode.get(key)
-        if reference_match is None:
-            continue
-        computed_neff = float(row["neff"])
-        reference_neff = float(reference_match["neff"])
-        signed_relative_percent = 100.0 * (computed_neff - reference_neff) / reference_neff
-        absolute_relative_percent = 100.0 * abs(computed_neff - reference_neff) / reference_neff
-        reference_comparison_rows.append(
-            {
-                "study_id": row["study_id"],
-                "mode_label": row["mode_label"],
-                "mode_index": row["mode_index"],
-                "b": row["b"],
-                "k0": row["k0"],
-                "k0_b": normalize_float_key(row["k0_b"]),
-                "computed_neff": f"{computed_neff:.6f}",
-                "reference_neff": f"{reference_neff:.6f}",
-                "delta_neff": f"{(computed_neff - reference_neff):.6f}",
-                "relative_error_percent": f"{signed_relative_percent:.6f}",
-                "absolute_relative_error_percent": f"{absolute_relative_percent:.6f}",
-                "reference_source": reference_match["source"],
-            }
-        )
-
-    reference_comparison_rows.sort(
-        key=lambda row: (row["mode_label"], float(row["k0_b"]))
-    )
-
-    with (consolidated_dir / "reference_comparison.csv").open(
-        "w", encoding="utf-8", newline=""
-    ) as stream:
-        writer = csv.DictWriter(
-            stream,
-            fieldnames=[
-                "study_id",
-                "mode_label",
-                "mode_index",
-                "b",
-                "k0",
-                "k0_b",
-                "computed_neff",
-                "reference_neff",
-                "delta_neff",
-                "relative_error_percent",
-                "absolute_relative_error_percent",
-                "reference_source",
-            ],
-        )
-        writer.writeheader()
-        writer.writerows(reference_comparison_rows)
-
     fem_vs_exact_rows: list[dict[str, str]] = []
     for row in reference_rows:
         if row["status"] != "ok":
@@ -509,60 +451,8 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(fem_vs_exact_rows)
 
-    exact_vs_points_rows: list[dict[str, str]] = []
-    for exact_row in exact_reference_rows:
-        key = (exact_row["mode_label"], normalize_float_key(exact_row["k0_b"]))
-        figure_match = reference_lookup_by_mode.get(key)
-        if figure_match is None:
-            continue
-        exact_neff = float(exact_row["neff"])
-        figure_neff = float(figure_match["neff"])
-        signed_relative_percent = 100.0 * (exact_neff - figure_neff) / figure_neff
-        absolute_relative_percent = 100.0 * abs(exact_neff - figure_neff) / figure_neff
-        exact_vs_points_rows.append(
-            {
-                "mode_label": exact_row["mode_label"],
-                "mode_index": exact_row["mode_index"],
-                "b": exact_row["b"],
-                "k0": exact_row["k0"],
-                "k0_b": exact_row["k0_b"],
-                "exact_neff": f"{exact_neff:.6f}",
-                "reference_neff": f"{figure_neff:.6f}",
-                "delta_neff": f"{(exact_neff - figure_neff):.6f}",
-                "relative_error_percent": f"{signed_relative_percent:.6f}",
-                "absolute_relative_error_percent": f"{absolute_relative_percent:.6f}",
-                "reference_source": figure_match["source"],
-                "exact_source": exact_row["source"],
-            }
-        )
-
-    exact_vs_points_rows.sort(key=lambda row: (row["mode_label"], float(row["k0_b"])))
-
-    with (consolidated_dir / "exact_vs_reference_points.csv").open(
-        "w", encoding="utf-8", newline=""
-    ) as stream:
-        writer = csv.DictWriter(
-            stream,
-            fieldnames=[
-                "mode_label",
-                "mode_index",
-                "b",
-                "k0",
-                "k0_b",
-                "exact_neff",
-                "reference_neff",
-                "delta_neff",
-                "relative_error_percent",
-                "absolute_relative_error_percent",
-                "reference_source",
-                "exact_source",
-            ],
-        )
-        writer.writeheader()
-        writer.writerows(exact_vs_points_rows)
-
     summary_by_mode: dict[str, list[float]] = defaultdict(list)
-    for row in reference_comparison_rows:
+    for row in fem_vs_exact_rows:
         summary_by_mode[row["mode_label"]].append(
             float(row["absolute_relative_error_percent"])
         )

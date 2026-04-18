@@ -22,7 +22,7 @@ com `n_s = 2.20`, `\Delta n = 0.01` e `d = 1`, em linha com o benchmark TE exato
 
 O sweep completo do Caso 2 é automatizado por `scripts/run_planar_diffuse_sweep.py`. Nesta etapa, o repositório assume `d = 1` no arquivo-base do caso e varia `k0` via `solver.wavelength_um`, exportando os resultados consolidados no mesmo par de grandezas usado na figura de referência: `k0 d` no eixo horizontal e `n_eff` no eixo vertical. O domínio numérico é `10 x 10`, e a direção `x` é usada como buffer numérico para o caso planar, não como largura física do guia.
 
-O arquivo [planar_diffuse_isotropic_fig2_reference_points.csv](planar_diffuse_isotropic_fig2_reference_points.csv) guarda os pontos aproximados da Fig. 2 usados para a sobreposição visual e para a comparação numérica preliminar com a curva calculada. A consolidação do sweep agora também gera uma referência analítica TE baseada na equação característica do artigo [6-19], o que permite comparar lado a lado FEM, pontos aproximados da figura e solução exata.
+Nesta etapa, a consolidação do Caso 2 usa apenas a referência analítica TE baseada na equação característica do artigo [6-19], evitando dependência de pontos visuais aproximados da figura.
 
 O arquivo [homogeneous_channel_isotropic_case.yaml](homogeneous_channel_isotropic_case.yaml) abre a reprodução do **Caso 1** como um guia de canal isotrópico homogêneo em degrau, com hipótese geométrica inicial `a = 2b`, `b = 1`, `a = 2`, índices `n1 = 1.0`, `n2 = 1.43` e `n3 = 1.50`, e núcleo retangular alinhado às interfaces `x = ±1`, `y = 0` e `y = 1`. Nesta etapa, ele serve como caso-base para um sweep na frequência normalizada
 
@@ -32,4 +32,4 @@ e para a extração da constante de propagação normalizada
 
 `B = (n_eff^2 - n2^2) / (n3^2 - n2^2)`.
 
-O sweep preliminar do Caso 1 é automatizado por `scripts/run_case1_homogeneous_channel_sweep.py`, com consolidação em `scripts/consolidate_case1_homogeneous_channel_sweep.py` e gráfico SVG em `scripts/plot_case1_homogeneous_channel_sweep.py`. Por enquanto, a comparação visual com a Fig. 1 fica preparada, mas depende de pontos de referência explícitos para ser fechada numericamente.
+O sweep preliminar do Caso 1 é automatizado por `scripts/run_case1_homogeneous_channel_sweep.py`, com consolidação em `scripts/consolidate_case1_homogeneous_channel_sweep.py` e gráfico SVG em `scripts/plot_case1_homogeneous_channel_sweep.py`. Os pontos aproximados da Fig. 1 usados para comparação visual preliminar estão em [homogeneous_channel_fig1_reference_points.csv](homogeneous_channel_fig1_reference_points.csv).

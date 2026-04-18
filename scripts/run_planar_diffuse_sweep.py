@@ -28,10 +28,10 @@ SMOKE_K0_B_VALUES = [10.0, 40.0, 150.0]
 FULL_STUDIES = [
     StudyDefinition(
         "d10_reference",
-        "meshes/planar_d10_a2b_reference.mesh",
-        "reference",
-        5.0,
-        0.03125,
+        "meshes/planar_d10_a2b_reference_x2y2.mesh",
+        "reference_x2y2",
+        8.0,
+        0.007812,
         True,
     ),
 ]
@@ -41,7 +41,7 @@ SMOKE_STUDIES = [
         "d10_smoke",
         "meshes/planar_d10_a2b_smoke.mesh",
         "smoke",
-        5.0,
+        8.0,
         0.125,
         True,
     ),
@@ -366,7 +366,7 @@ def main() -> None:
                 f"domain_width_x: {10.0:.6f}",
                 f"domain_width_y: {10.0:.6f}",
                 "source_case_note: the source PDFs indicate a planar one-sided diffused profile, so x acts only as a numerical buffer and not as a physical guide width parameter",
-                "refinement_note: mesh refinement is concentrated near the surface y = 0 and along the diffusion depth scale d = 1",
+                "refinement_note: reference run uses an x2/y2 denser structured grid around y = 0 and along the diffusion depth scale d = 1",
                 "comparison_status: preliminary_case_2_reproduction_with_b_assumed_constant",
             ]
         )
