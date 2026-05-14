@@ -363,7 +363,10 @@ DenseVector expand_reduced_mode_to_assembled_dofs(
     const std::vector<std::size_t>& free_dofs =
         global_assembly.boundary_condition.free_dof_indices;
     if (reduced_mode.size() != free_dofs.size()) {
-        return {};
+        throw std::runtime_error(
+            "Cannot expand reduced mode to assembled dofs: expected " +
+            std::to_string(free_dofs.size()) + " reduced entries, received " +
+            std::to_string(reduced_mode.size()));
     }
 
     DenseVector assembled_mode(global_assembly.assembled_dof_count, 0.0);
@@ -404,9 +407,6 @@ ModeConfinementDiagnostics compute_rectangular_core_mode_confinement(
     ModeConfinementDiagnostics diagnostics;
     const DenseVector assembled_mode =
         expand_reduced_mode_to_assembled_dofs(reduced_mode, global_assembly);
-    if (assembled_mode.empty()) {
-        return diagnostics;
-    }
 
     double total_energy = 0.0;
     double core_energy = 0.0;
