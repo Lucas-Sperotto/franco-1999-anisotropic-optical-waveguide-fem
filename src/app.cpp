@@ -380,18 +380,20 @@ DenseVector expand_reduced_mode_to_assembled_dofs(
     return assembled_mode;
 }
 
-bool is_point_inside_rectangular_core(const Point2D& point, const CaseConfig& config) {
+bool is_point_inside_rectangular_core(
+    const Point2D& point,
+    const RectangularChannelStepIndexProfile& profile) {
     constexpr double kTolerance = 1.0e-12;
-    const double half_width = 0.5 * config.core_width;
-    return point.x >= config.core_center_x - half_width - kTolerance &&
-           point.x <= config.core_center_x + half_width + kTolerance &&
-           point.y >= config.surface_y - kTolerance &&
-           point.y <= config.surface_y + config.core_height + kTolerance;
+    const double half_width = 0.5 * profile.core_width;
+    return point.x >= profile.core_center_x - half_width - kTolerance &&
+           point.x <= profile.core_center_x + half_width + kTolerance &&
+           point.y >= profile.surface_y - kTolerance &&
+           point.y <= profile.surface_y + profile.core_height + kTolerance;
 }
 
 bool is_triangle_centroid_inside_rectangular_core(
     const TriangleGeometry& triangle_geometry,
-    const CaseConfig& config) {
+    const RectangularChannelStepIndexProfile& profile) {
     const Point2D centroid{
         (triangle_geometry.vertices[0].x + triangle_geometry.vertices[1].x +
          triangle_geometry.vertices[2].x) /
@@ -400,7 +402,7 @@ bool is_triangle_centroid_inside_rectangular_core(
          triangle_geometry.vertices[2].y) /
             3.0,
     };
-    return is_point_inside_rectangular_core(centroid, config);
+    return is_point_inside_rectangular_core(centroid, profile);
 }
 
 ModeConfinementDiagnostics compute_rectangular_core_mode_confinement(
@@ -411,6 +413,15 @@ ModeConfinementDiagnostics compute_rectangular_core_mode_confinement(
     ModeConfinementDiagnostics diagnostics;
     const DenseVector assembled_mode =
         expand_reduced_mode_to_assembled_dofs(reduced_mode, global_assembly);
+    const RectangularChannelStepIndexProfile profile{
+        config.cover_index,
+        config.substrate_index,
+        config.core_index,
+        config.core_width,
+        config.core_height,
+        config.core_center_x,
+        config.surface_y,
+    };
 
     double total_energy = 0.0;
     double core_energy = 0.0;
@@ -432,7 +443,7 @@ ModeConfinementDiagnostics compute_rectangular_core_mode_confinement(
         }
         element_energy = std::max(0.0, element_energy);
         total_energy += element_energy;
-        if (is_triangle_centroid_inside_rectangular_core(element.geometry, config)) {
+        if (is_triangle_centroid_inside_rectangular_core(element.geometry, profile)) {
             core_energy += element_energy;
         }
     }
