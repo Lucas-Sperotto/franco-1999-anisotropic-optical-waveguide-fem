@@ -137,8 +137,11 @@ std::string format_gradient(const Gradient2D& gradient) {
     return stream.str();
 }
 
-std::string mode_index_to_label(std::size_t one_based_index) {
-    if (one_based_index >= 1 && one_based_index <= 3) {
+std::string mode_index_to_label(std::size_t one_based_index,
+                                const std::string& material_model) {
+    const bool is_planar = material_model == "planar_diffuse_isotropic_exponential" ||
+                           material_model == "planar_diffuse_isotropic_surface_exponential";
+    if (is_planar && one_based_index >= 1 && one_based_index <= 3) {
         return "TE" + std::to_string(one_based_index - 1);
     }
     return "mode_" + std::to_string(one_based_index);
@@ -312,14 +315,15 @@ std::string build_neff_csv(const GeneralizedEigenSolution& solution) {
 
 std::string build_dispersion_curve_points_csv(const GeneralizedEigenSolution& solution,
                                               double characteristic_b,
-                                              double k0) {
+                                              double k0,
+                                              const std::string& material_model) {
     std::ostringstream stream;
     stream << "b,k0,k0_b,mode_index,mode_label,eigenvalue_n_eff_squared,neff,beta,status\n";
     for (std::size_t i = 0; i < solution.eigenpairs.size(); ++i) {
         const GeneralizedEigenpair& eigenpair = solution.eigenpairs[i];
         stream << format_number(characteristic_b) << "," << format_number(k0) << ","
                << format_number(k0 * characteristic_b) << "," << (i + 1) << ","
-               << mode_index_to_label(i + 1) << ","
+               << mode_index_to_label(i + 1, material_model) << ","
                << format_number(eigenpair.eigenvalue) << ",";
         if (eigenpair.has_neff) {
             stream << format_number(eigenpair.n_eff) << ","
@@ -454,8 +458,8 @@ std::string build_modal_metrics_csv(const GeneralizedEigenSolution& solution,
     for (std::size_t i = 0; i < solution.eigenpairs.size(); ++i) {
         const GeneralizedEigenpair& eigenpair = solution.eigenpairs[i];
         const std::size_t mode_index = i + 1;
-        stream << mode_index << "," << mode_index_to_label(mode_index) << ","
-               << format_number(eigenpair.eigenvalue) << ",";
+        stream << mode_index << "," << mode_index_to_label(mode_index, config.material_model)
+               << "," << format_number(eigenpair.eigenvalue) << ",";
 
         const bool mode_ok = eigenpair.has_neff;
         if (mode_ok) {
@@ -992,7 +996,8 @@ int run_application(int argc, char** argv) {
                     summary << "mode_" << (i + 1) << "_eigenvalue_n_eff_squared: "
                             << format_number(eigenpair.eigenvalue) << "\n";
                     summary << "mode_" << (i + 1)
-                            << "_label: " << mode_index_to_label(i + 1) << "\n";
+                            << "_label: " << mode_index_to_label(i + 1, config.material_model)
+                            << "\n";
                     if (eigenpair.has_neff) {
                         summary << "mode_" << (i + 1) << "_n_eff: "
                                 << format_number(eigenpair.n_eff) << "\n";
@@ -1021,7 +1026,7 @@ int run_application(int argc, char** argv) {
         write_text_file(results_dir / "neff.csv", build_neff_csv(eigen_solution));
         write_text_file(results_dir / "dispersion_curve_points.csv",
                         build_dispersion_curve_points_csv(
-                            eigen_solution, characteristic_b, k0));
+                            eigen_solution, characteristic_b, k0, config.material_model));
         write_text_file(results_dir / "modal_summary.csv",
                         build_neff_csv(eigen_solution));
         write_text_file(results_dir / "modal_metrics.csv",

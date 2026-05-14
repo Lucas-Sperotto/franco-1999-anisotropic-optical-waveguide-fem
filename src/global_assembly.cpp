@@ -29,6 +29,7 @@ DenseMatrix reduce_dense_matrix(const DenseMatrix& matrix,
     return extract_dense_submatrix(matrix, free_dofs);
 }
 
+// Assumes y is in µm; distinct y-levels must differ by ≥ 1 pm (1e-6 µm) to map to different keys.
 long long make_y_level_key(double y) {
     return std::llround(y * 1.0e9);
 }
