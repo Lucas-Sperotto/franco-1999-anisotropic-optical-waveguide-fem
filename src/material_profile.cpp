@@ -306,10 +306,13 @@ GlobalNodalMaterialFields make_channel_diffused_isotropic_global_material(
     validate_channel_diffused_isotropic_profile(profile);
 
     GlobalNodalMaterialFields fields;
-    // TODO: activate delta_x/delta_z derivative terms for this 2-D diffused
-    // profile after the docs/02 F4 convention is audited for the circular
-    // geometry. This first Caso 3 path keeps the symmetric variable-coefficient
-    // terms needed for a reproducible sanity check.
+    // BLOCKER (T-005): n(x,y) varies in both x and y inside the core
+    // (Eqs. 7-9, docs/05), so both flags should be true. However, docs/02 §3b
+    // explicitly states that F2, F3, F4 become non-symmetric when delta flags
+    // are active, and recommends a non-symmetric eigensolver. The current
+    // Jacobi solver only handles symmetric systems and returns 0 modes when F
+    // is non-symmetric. Flags remain false until a QZ/LAPACK non-symmetric
+    // generalized eigensolver is implemented (assign to Codex).
     fields.delta_x = false;
     fields.delta_z = false;
     fields.homogeneous = false;
