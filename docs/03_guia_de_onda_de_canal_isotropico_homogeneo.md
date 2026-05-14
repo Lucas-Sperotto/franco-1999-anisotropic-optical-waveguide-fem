@@ -89,45 +89,41 @@ Gráfico gerado:
 - [../out/case1_homogeneous_channel/reference_run_v2/plots/fig1_like_reference.svg](../out/case1_homogeneous_channel/reference_run_v2/plots/fig1_like_reference.svg)
 - [../out/case1_homogeneous_channel/reference_run_v3/plots/fig1_like_reference.svg](../out/case1_homogeneous_channel/reference_run_v3/plots/fig1_like_reference.svg)
 
-## Comparação preliminar com pontos aproximados da Fig. 1
+## Comparação com pontos aproximados da Fig. 1
 
-Os valores abaixo são os pontos visuais aproximados da figura fornecidos para auditoria preliminar. A comparação consolidada está em:
+A tabela abaixo reflete o estado atual da reprodução consolidado em [../RESULTADOS_REPRODUCAO.md](../RESULTADOS_REPRODUCAO.md). Os valores de referência foram extraídos visualmente da Fig. 1 do artigo e, portanto, devem ser tratados como aproximações.
 
-- [../out/case1_homogeneous_channel/reference_run_v2/consolidated/reference_comparison.csv](../out/case1_homogeneous_channel/reference_run_v2/consolidated/reference_comparison.csv)
-- [../out/case1_homogeneous_channel/reference_run_v3/consolidated/reference_comparison.csv](../out/case1_homogeneous_channel/reference_run_v3/consolidated/reference_comparison.csv)
-
-Nesta tabela, o erro relativo percentual assinado foi calculado por:
-
-$$
-\frac{B_{\mathrm{ref\_aprox}} - B_{\mathrm{calc}}}{B_{\mathrm{ref\_aprox}}}\times 100.
-$$
+A tabela abaixo usa a malha smoke (143 nós, 99 graus de liberdade livres) com `cover_index = 1.00` (ar abaixo do núcleo):
 
 | frequência normalizada | $B_{\mathrm{ref\_aprox}}$ | $B_{\mathrm{calc}}$ | erro relativo (\%) |
-|---:|---:|---:|---:|
-| 0.8 | 0.050000 | -0.201638 | 503.276000 |
-| 1.0 | 0.200000 | -0.129040 | 164.520000 |
-| 1.2 | 0.350000 | -0.089614 | 125.604000 |
-| 1.4 | 0.475000 | -0.065834 | 113.859789 |
-| 1.6 | 0.500000 | -0.050415 | 110.083000 |
-| 1.8 | 0.625000 | -0.039827 | 106.372320 |
-| 2.0 | 0.675000 | -0.032255 | 104.778519 |
-| 2.2 | 0.725000 | -0.026658 | 103.676966 |
-| 2.4 | 0.760000 | 0.102629 | 86.496184 |
-| 2.6 | 0.800000 | 0.224147 | 71.981625 |
-| 2.8 | 0.825000 | 0.322097 | 60.957939 |
-| 3.0 | 0.840000 | 0.402201 | 52.118929 |
-| 3.2 | 0.860000 | 0.468571 | 45.515000 |
-| 3.4 | 0.875000 | 0.531962 | 39.204343 |
-| 3.6 | 0.890000 | 0.578884 | 34.956854 |
-| 3.8 | 0.900000 | 0.618984 | 31.224000 |
-| 4.0 | 0.910000 | 0.653531 | 28.183407 |
+| ---: | ---: | ---: | ---: |
+| 1.2 | 0.350 | 0.502 | +43.5 |
+| 2.0 | 0.675 | 0.735 | −8.9 |
+| 4.0 | 0.910 | 0.910 | +0.05 |
+
+**Resultado do teste de geometria buried (T-004, 2026-05-14):** a hipótese de guia enterrado com `cover_index = 1.43` foi testada empiricamente na mesma malha smoke. Os resultados foram:
+
+| frequência normalizada | $B_{\mathrm{ref\_aprox}}$ | $B_{\mathrm{calc}}$ (buried) | erro relativo (\%) |
+| ---: | ---: | ---: | ---: |
+| 1.2 | 0.350 | 0.572 | +63.3 |
+| 2.0 | 0.675 | 0.765 | +13.3 |
+| 4.0 | 0.910 | 0.914 | +0.5 |
+
+A geometria enterrada piorou o acordo em todas as frequências normalizadas. A hipótese buried foi **rejeitada empiricamente**. A configuração `cover_index = 1.00` foi restaurada.
+
+A fonte mais provável da discrepância restante é uma das seguintes (em ordem de plausibilidade):
+
+1. Os valores de referência $B_{\mathrm{ref\_aprox}}$ foram extraídos visualmente da Fig. 1 e podem corresponder à curva de Marcatili (que fica abaixo da curva FEM/VIE próximo ao corte), não à curva FEM original.
+2. A malha smoke é muito grosseira (99 graus de liberdade) para frequências próximas ao corte (V = 1.2).
+3. O truncamento do domínio com Dirichlet homogêneo superestima $n_{\mathrm{eff}}$ em modos pouco confinados.
 
 ## Conclusão desta rodada do Caso 1
 
 - A trilha de reprodução do Caso 1 está completa e auditável no repositório.
-- A tendência global da curva FEM é monotônica com a frequência normalizada.
-- A concordância com os pontos visuais aproximados da figura ainda está ruim, especialmente na região de baixa frequência.
-- O resultado deve ser tratado como preliminar até fechar melhor a interpretação de normalização da figura original e a convergência numérica perto do corte.
+- A curva de dispersão é qualitativamente correta e converge com a referência em V alto (erro < 0.5% em V = 4.0).
+- A hipótese de geometria buried foi testada e rejeitada: aumentou o erro de +43% para +63% em V = 1.2.
+- O desvio em baixas frequências normalizadas é provavelmente devido à leitura visual da curva errada (Marcatili vs. FEM/VIE) ou à malha muito grosseira nessa faixa.
+- O caso é considerado parcialmente validado. Antes de conclusões definitivas, recomenda-se reexecutar o sweep com a malha de referência (`channel_a2b_b1_reference.mesh`) e verificar qual curva da Fig. 1 foi usada na extração dos pontos de referência.
 
 Este caso corresponde ao **Caso 1** resumido em [09_resumo_dos_casos_de_teste.md](09_resumo_dos_casos_de_teste.md) e prepara a transição para o primeiro exemplo com índice espacialmente variável em [04_guia_de_onda_planar_difuso_isotropico.md](04_guia_de_onda_planar_difuso_isotropico.md).
 

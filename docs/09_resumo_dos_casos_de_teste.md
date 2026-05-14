@@ -309,6 +309,26 @@ $$
 - a definição explícita de $f(x,y)$ no Caso 4, que não aparece completa no texto consolidado desta pasta;
 - a parametrização geométrica associada à dimensão $b$ no Caso 1, que depende da leitura da figura original.
 
+## Estado atual de reprodução (2026-05-14)
+
+Esta seção registra o estado real de implementação e validação de cada caso no repositório, distinto do planejamento das seções anteriores.
+
+| Caso | Figura | Status | Observação |
+| --- | --- | --- | --- |
+| 1 — canal homogêneo isotrópico | Fig. 1 | PARCIAL | Solver executa, gera CSV e SVG. Discrepância em baixas frequências (V=1.2: +43%). Hipótese buried testada e rejeitada (piora o erro). Possível leitura de curva errada nos pontos de referência. |
+| 2 — planar difuso isotrópico | Fig. 2 | COMPLETO | CSV, SVG e comparação analítica (erro máximo 0,0017%). Regressão ativa no CTest. |
+| 3 — canal circular difuso isotrópico | Fig. 4 | PARCIAL | Solver executa pontualmente, gera CSV. Sem sweep completo nem figura. Flags `delta_x`/`delta_z` permanecem desativados: o solver Jacobi atual não suporta F não-simétrico (ver T-005 em TODO.md). |
+| 4 — canal Gaussian-Gaussian | Fig. 5 | FALTANDO | Fórmula de `f(x,y)` não documentada no repositório. Depende de T-007. |
+| 5 — APE LiNbO₃ | Fig. 6 | FALTANDO | Perfil anisotrópico não implementado. Depende de T-009, T-010, T-011. |
+| 6 — Ti:LiNbO₃ | Fig. 7 | FALTANDO | Perfil anisotrópico não implementado. Depende de T-009, T-010, T-012. |
+
+**Resumo:** 1 caso completo (Caso 2), 2 parciais (Casos 1 e 3), 3 faltando (Casos 4-6).
+
+**Próximas ações para os casos parciais:**
+
+- Caso 1: reexecutar o sweep com a malha de referência (`channel_a2b_b1_reference.mesh`) e verificar qual curva da Fig. 1 foi usada na extração dos pontos de referência visual.
+- Caso 3: implementar eigensolver não-simétrico (QZ/LAPACK) para ativar os termos de gradiente de material e criar pipeline de sweep e plot.
+
 ---
 
 **Navegação:** [Anterior](08_referencias.md) | [Índice](README.md)
