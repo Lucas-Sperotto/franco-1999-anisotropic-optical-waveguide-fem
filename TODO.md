@@ -60,17 +60,19 @@ Casos faltantes:
 
 ### Fase B - Fechamento dos casos numéricos
 
-- [ ] T-004 — Resolver a geometria do Caso 1
+- [x] T-004 — Resolver a geometria do Caso 1
   - Responsável: Claude
   - Arquivos: `cases/homogeneous_channel_isotropic_case.yaml`, `docs/03_guia_de_onda_de_canal_isotropico_homogeneo.md`, `scripts/run_case1_homogeneous_channel_sweep.py`
   - Critério de aceite: fica documentado se a Fig. 1 usa guia buried simétrico ou superfície assimétrica; o YAML é ajustado apenas se a hipótese for confirmada; a nova curva reduz a discrepância sem mascarar o método.
   - Comando de teste: `python3 scripts/run_case1_homogeneous_channel_sweep.py --smoke --output-root build/test_output/case1_geometry_check`
+  - **Resultado (2026-05-14):** hipótese buried (`cover_index=1.43`) testada empiricamente — erro em V=1.2 piorou de +43% para +63%. Hipótese REJEITADA. `cover_index=1.00` mantido. Causa provável do desvio: leitura visual da curva de Marcatili em vez da FEM/VIE.
 
-- [ ] T-005 — Auditar o termo F4 no Caso 3
+- [x] T-005 — Auditar o termo F4 no Caso 3
   - Responsável: Claude
   - Arquivos: `docs/02_formulacao_por_elementos_finitos.md`, `docs/05_guia_de_onda_de_canal_difuso_isotropico.md`, `src/material_profile.cpp`, `src/local_assembly.cpp`
   - Critério de aceite: a decisão sobre `delta_x` e `delta_z` no perfil circular fica registrada com justificativa; se a documentação não sustentar mudança, manter o caso conservador e registrar TODO explícito.
   - Comando de teste: verificação documental e `build/waveguide_global_tests`
+  - **Resultado (2026-05-14):** ativar os flags torna F não-simétrica (docs/02 §3b confirma). O eigensolver Jacobi atual retorna 0 modos com F assimétrica. Flags permanecem `false` com BLOCKER comment em `src/material_profile.cpp`. Próxima ação: implementar eigensolver QZ/LAPACK (Codex).
 
 - [ ] T-006 — Criar pipeline completo da Fig. 4
   - Responsável: Codex
@@ -142,17 +144,19 @@ Casos faltantes:
 
 ### Fase D - Documentação científica
 
-- [ ] T-017 — Atualizar `docs/03` com o estado real do Caso 1
+- [x] T-017 — Atualizar `docs/03` com o estado real do Caso 1
   - Responsável: Claude
   - Arquivos: `docs/03_guia_de_onda_de_canal_isotropico_homogeneo.md`
   - Critério de aceite: a tabela antiga com resultados pré-correção não aparece como resultado atual; a seção explica geometria, desvios e limites da comparação.
   - Comando de teste: verificação manual
+  - **Resultado (2026-05-14):** tabela original mantida com contexto; tabela buried adicionada com resultados piores; conclusão revisada com diagnóstico e 3 causas prováveis do desvio.
 
-- [ ] T-018 — Atualizar `docs/09` com a matriz real dos casos
+- [x] T-018 — Atualizar `docs/09` com a matriz real dos casos
   - Responsável: Claude
   - Arquivos: `docs/09_resumo_dos_casos_de_teste.md`
   - Critério de aceite: Caso 2 aparece como pronto; Caso 1 como parcial; Caso 3 como solver/ponto implementado mas sem figura; Casos 4-6 como pendentes.
   - Comando de teste: verificação manual
+  - **Resultado (2026-05-14):** seção "Estado atual de reprodução" adicionada com tabela COMPLETO/PARCIAL/FALTANDO por caso e próximas ações.
 
 - [ ] T-019 — Documentar o Caso 3 depois do sweep
   - Responsável: Claude
@@ -162,11 +166,12 @@ Casos faltantes:
 
 ### Fase E - Relatório final
 
-- [ ] T-020 — Escrever `RESULTADOS_REPRODUCAO.md`
+- [x] T-020 — Escrever `RESULTADOS_REPRODUCAO.md`
   - Responsável: Claude
   - Arquivos: `RESULTADOS_REPRODUCAO.md`
   - Critério de aceite: o relatório lista metodologia, comandos, tabelas, CSVs e figuras dos casos prontos; casos pendentes são declarados como pendentes, não como validados.
   - Comando de teste: `/usr/bin/ctest --test-dir build --output-on-failure`
+  - **Resultado (2026-05-14):** relatório completo escrito e atualizado com resultados dos T-004 e T-005. 1 caso PASS (Fig. 2), 2 PARTIAL (Figs. 1 e 4), 3 MISSING (Figs. 5–7).
 
 ### Fase F - Limpeza final do repositório
 
