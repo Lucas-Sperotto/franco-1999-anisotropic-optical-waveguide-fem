@@ -201,13 +201,12 @@ void validate_boundary_condition(const std::string& boundary_condition) {
     if (boundary_condition != "dirichlet_zero_on_boundary" &&
         boundary_condition != "dirichlet_zero_on_boundary_nodes" &&
         boundary_condition != "dirichlet_zero_on_y_extrema" &&
-        boundary_condition != "natural_zero_flux_on_boundary" &&
-        boundary_condition != "open_boundary_natural") {
+        boundary_condition != "natural_zero_flux_on_boundary") {
         throw std::runtime_error(
             "Unsupported boundary.condition '" + boundary_condition +
             "'. Supported boundary conditions: dirichlet_zero_on_boundary, "
             "dirichlet_zero_on_boundary_nodes, dirichlet_zero_on_y_extrema, "
-            "natural_zero_flux_on_boundary, open_boundary_natural");
+            "natural_zero_flux_on_boundary");
     }
 }
 
