@@ -75,5 +75,11 @@ GlobalAssemblyResult assemble_global_rectangular_channel_step_index_system(
     const ArticleLocalAssemblyOptions& local_options,
     const std::string& boundary_label = "dirichlet_zero_on_boundary_nodes",
     bool planar_x_invariant_reduction = false);
+GlobalAssemblyResult assemble_global_channel_diffused_isotropic_system(
+    const Mesh& mesh,
+    const ChannelDiffusedIsotropicProfile& profile,
+    const ArticleLocalAssemblyOptions& local_options,
+    const std::string& boundary_label = "dirichlet_zero_on_boundary_nodes",
+    bool planar_x_invariant_reduction = false);
 
 }  // namespace waveguide

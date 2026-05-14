@@ -17,6 +17,7 @@ struct CaseConfig {
     double cover_index = 0.0;
     double substrate_index = 0.0;
     double core_index = 0.0;
+    double peak_index = 0.0;
     double delta_index = 0.0;
     double diffusion_depth = 0.0;
     bool linearized_permittivity = false;

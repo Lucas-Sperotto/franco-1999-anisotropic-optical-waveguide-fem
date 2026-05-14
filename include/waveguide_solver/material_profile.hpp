@@ -38,6 +38,16 @@ struct RectangularChannelStepIndexProfile {
     double surface_y = 0.0;
 };
 
+struct ChannelDiffusedIsotropicProfile {
+    double cover_index = 1.0;
+    double background_index = 1.44;
+    double peak_index = 1.50;
+    double core_width = 2.0;
+    double core_height = 1.0;
+    double core_center_x = 0.0;
+    double surface_y = 0.0;
+};
+
 double get_global_material_value(const std::map<int, double>& field_by_node_id,
                                  int node_id,
                                  const std::string& field_label);
@@ -57,6 +67,12 @@ double evaluate_planar_diffuse_isotropic_index_squared(
 double evaluate_planar_surface_diffuse_isotropic_index_squared(
     double y,
     const PlanarDiffuseIsotropicProfile& profile);
+double evaluate_channel_diffused_isotropic_index(
+    const Point2D& point,
+    const ChannelDiffusedIsotropicProfile& profile);
+double evaluate_channel_diffused_isotropic_index_squared(
+    const Point2D& point,
+    const ChannelDiffusedIsotropicProfile& profile);
 
 GlobalNodalMaterialFields make_homogeneous_isotropic_global_material(
     const Mesh& mesh,
@@ -73,6 +89,9 @@ GlobalNodalMaterialFields make_planar_surface_diffuse_isotropic_global_material(
 GlobalNodalMaterialFields make_rectangular_channel_step_index_global_material(
     const Mesh& mesh,
     const RectangularChannelStepIndexProfile& profile);
+GlobalNodalMaterialFields make_channel_diffused_isotropic_global_material(
+    const Mesh& mesh,
+    const ChannelDiffusedIsotropicProfile& profile);
 
 ArticleLocalMaterialCoefficients make_rectangular_channel_step_index_element_material(
     const LinearTriangleP1Element& element,

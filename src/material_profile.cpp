@@ -42,6 +42,23 @@ void validate_rectangular_channel_profile(
     }
 }
 
+void validate_channel_diffused_isotropic_profile(
+    const ChannelDiffusedIsotropicProfile& profile) {
+    if (profile.cover_index <= 0.0 || profile.background_index <= 0.0 ||
+        profile.peak_index <= 0.0) {
+        throw std::runtime_error(
+            "The channel diffused isotropic profile requires positive indices");
+    }
+    if (profile.peak_index <= profile.background_index) {
+        throw std::runtime_error(
+            "The channel diffused isotropic profile requires peak_index > background_index");
+    }
+    if (profile.core_width <= 0.0 || profile.core_height <= 0.0) {
+        throw std::runtime_error(
+            "The channel diffused isotropic profile requires positive core dimensions");
+    }
+}
+
 bool is_point_inside_rectangular_channel_core(
     const Point2D& point,
     const RectangularChannelStepIndexProfile& profile) {
@@ -63,6 +80,17 @@ double evaluate_rectangular_channel_step_index_squared(
         return profile.cover_index * profile.cover_index;
     }
     return profile.substrate_index * profile.substrate_index;
+}
+
+bool is_point_inside_channel_diffused_core(
+    const Point2D& point,
+    const ChannelDiffusedIsotropicProfile& profile) {
+    constexpr double kTolerance = 1.0e-12;
+    const double half_width = 0.5 * profile.core_width;
+    return point.x >= profile.core_center_x - half_width - kTolerance &&
+           point.x <= profile.core_center_x + half_width + kTolerance &&
+           point.y >= profile.surface_y - kTolerance &&
+           point.y <= profile.surface_y + profile.core_height + kTolerance;
 }
 
 Point2D compute_triangle_centroid(const TriangleGeometry& geometry) {
@@ -138,6 +166,43 @@ double evaluate_planar_surface_diffuse_isotropic_index_squared(
 
     const double refractive_index =
         profile.background_index + profile.delta_index * exponential_weight;
+    return refractive_index * refractive_index;
+}
+
+double evaluate_channel_diffused_isotropic_index(
+    const Point2D& point,
+    const ChannelDiffusedIsotropicProfile& profile) {
+    validate_channel_diffused_isotropic_profile(profile);
+
+    if (point.y < profile.surface_y) {
+        return profile.cover_index;
+    }
+    if (!is_point_inside_channel_diffused_core(point, profile)) {
+        return profile.background_index;
+    }
+
+    // TODO: docs/05 defines the circular profile using coordinates from the
+    // diffusion origin but does not encode the figure orientation in the case
+    // schema. This maps that origin to (core_center_x, surface_y), with y > 0
+    // into the substrate, matching the current channel meshes.
+    const double x = point.x - profile.core_center_x;
+    const double y = point.y - profile.surface_y;
+    const double half_width = 0.5 * profile.core_width;
+    const double length_squared =
+        std::abs(y) >= std::abs(x)
+            ? profile.core_height * profile.core_height + x * x
+            : half_width * half_width + y * y;
+    const double radius_squared = x * x + y * y;
+    return profile.background_index +
+           ((profile.background_index - profile.peak_index) / length_squared) *
+               (radius_squared - length_squared);
+}
+
+double evaluate_channel_diffused_isotropic_index_squared(
+    const Point2D& point,
+    const ChannelDiffusedIsotropicProfile& profile) {
+    const double refractive_index =
+        evaluate_channel_diffused_isotropic_index(point, profile);
     return refractive_index * refractive_index;
 }
 
@@ -227,6 +292,33 @@ GlobalNodalMaterialFields make_rectangular_channel_step_index_global_material(
     for (const MeshNode& node : mesh.nodes) {
         const double refractive_index_squared =
             evaluate_rectangular_channel_step_index_squared(node.point, profile);
+        fields.nx2_by_node_id.emplace(node.id, refractive_index_squared);
+        fields.nz2_by_node_id.emplace(node.id, refractive_index_squared);
+        fields.gz2_by_node_id.emplace(node.id, 1.0 / refractive_index_squared);
+    }
+
+    return fields;
+}
+
+GlobalNodalMaterialFields make_channel_diffused_isotropic_global_material(
+    const Mesh& mesh,
+    const ChannelDiffusedIsotropicProfile& profile) {
+    validate_channel_diffused_isotropic_profile(profile);
+
+    GlobalNodalMaterialFields fields;
+    // TODO: activate delta_x/delta_z derivative terms for this 2-D diffused
+    // profile after the docs/02 F4 convention is audited for the circular
+    // geometry. This first Caso 3 path keeps the symmetric variable-coefficient
+    // terms needed for a reproducible sanity check.
+    fields.delta_x = false;
+    fields.delta_z = false;
+    fields.homogeneous = false;
+    fields.isotropic = true;
+    fields.model_label = "channel_diffused_isotropic_circular";
+
+    for (const MeshNode& node : mesh.nodes) {
+        const double refractive_index_squared =
+            evaluate_channel_diffused_isotropic_index_squared(node.point, profile);
         fields.nx2_by_node_id.emplace(node.id, refractive_index_squared);
         fields.nz2_by_node_id.emplace(node.id, refractive_index_squared);
         fields.gz2_by_node_id.emplace(node.id, 1.0 / refractive_index_squared);

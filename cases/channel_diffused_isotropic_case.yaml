@@ -1,0 +1,29 @@
+schema_version: 1
+
+case:
+  id: case03_channel_diffused_isotropic_circular
+  description: "Channel diffused isotropic guide with circular index profile from docs/05"
+
+mesh:
+  file: ../meshes/channel_a2b_b1_reference.mesh
+
+material:
+  model: channel_diffused_isotropic_circular
+  cover_index: 1.00
+  background_index: 1.44
+  peak_index: 1.50
+  core_width: 2.00
+  core_height: 1.00
+  core_center_x: 0.00
+  surface_y: 0.00
+
+boundary:
+  condition: dirichlet_zero_on_boundary_nodes
+
+solver:
+  requested_modes: 1
+  wavelength_um: 0.295466
+  planar_x_invariant_reduction: false
+
+output:
+  tag: channel_diffused_isotropic_circular

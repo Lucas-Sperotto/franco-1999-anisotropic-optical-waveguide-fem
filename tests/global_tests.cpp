@@ -7,6 +7,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -106,6 +107,23 @@ waveguide::Mesh make_rectangular_channel_mesh() {
         {21, {13, 14, 19}}, {22, {13, 19, 18}}, {23, {14, 15, 20}}, {24, {14, 20, 19}},
     };
     return mesh;
+}
+
+waveguide::Mesh load_case3_channel_reference_mesh() {
+    const std::filesystem::path repo_relative_path{
+        "meshes/channel_a2b_b1_reference.mesh"};
+    if (std::filesystem::exists(repo_relative_path)) {
+        return waveguide::load_minimal_mesh(repo_relative_path);
+    }
+
+    const std::filesystem::path build_relative_path{
+        "../meshes/channel_a2b_b1_reference.mesh"};
+    if (std::filesystem::exists(build_relative_path)) {
+        return waveguide::load_minimal_mesh(build_relative_path);
+    }
+
+    throw std::runtime_error(
+        "Could not locate meshes/channel_a2b_b1_reference.mesh for case 3 sanity test");
 }
 
 }  // namespace
@@ -374,6 +392,74 @@ int main() {
                         channel_eigen_solution.eigenpairs.front().n_eff <
                             channel_profile.core_index,
                     "expected the leading channel n_eff to lie between n2 and n3");
+
+        const waveguide::ChannelDiffusedIsotropicProfile diffused_channel_profile{
+            1.0,
+            1.44,
+            1.50,
+            2.0,
+            1.0,
+            0.0,
+            0.0,
+        };
+        expect_near(
+            waveguide::evaluate_channel_diffused_isotropic_index(
+                waveguide::Point2D{0.0, 0.0}, diffused_channel_profile),
+            diffused_channel_profile.peak_index,
+            "diffused channel center index");
+        expect_near(
+            waveguide::evaluate_channel_diffused_isotropic_index(
+                waveguide::Point2D{1.0, 0.0}, diffused_channel_profile),
+            diffused_channel_profile.background_index,
+            "diffused channel lateral boundary index");
+        expect_near(
+            waveguide::evaluate_channel_diffused_isotropic_index(
+                waveguide::Point2D{0.0, 1.0}, diffused_channel_profile),
+            diffused_channel_profile.background_index,
+            "diffused channel depth boundary index");
+
+        const waveguide::Mesh diffused_channel_mesh =
+            load_case3_channel_reference_mesh();
+        const double average_core_index_for_fig4 = 1.47;
+        const double diffused_channel_k0 =
+            channel_frequency_normalized * kPi /
+            (diffused_channel_profile.core_height *
+             std::sqrt(average_core_index_for_fig4 * average_core_index_for_fig4 -
+                       diffused_channel_profile.background_index *
+                           diffused_channel_profile.background_index));
+        const waveguide::ArticleLocalAssemblyOptions diffused_channel_local_options =
+            waveguide::make_default_article_local_assembly_options(diffused_channel_k0);
+        const waveguide::GlobalAssemblyResult diffused_channel_assembly =
+            waveguide::assemble_global_channel_diffused_isotropic_system(
+                diffused_channel_mesh,
+                diffused_channel_profile,
+                diffused_channel_local_options);
+
+        expect_true(
+            waveguide::is_dense_matrix_symmetric(
+                diffused_channel_assembly.matrices.M_full),
+            "diffused channel M_full should be symmetric");
+        expect_true(
+            waveguide::is_dense_matrix_symmetric(
+                diffused_channel_assembly.matrices.F_full),
+            "diffused channel F_full should be symmetric");
+
+        const waveguide::GeneralizedEigenSolution diffused_channel_eigen_solution =
+            waveguide::solve_generalized_eigenproblem_dense(
+                diffused_channel_assembly.matrices.F_reduced,
+                diffused_channel_assembly.matrices.M_reduced,
+                diffused_channel_local_options.k0,
+                1);
+
+        expect_true(diffused_channel_eigen_solution.eigenpairs.size() == 1,
+                    "expected one diffused channel eigenpair");
+        expect_true(diffused_channel_eigen_solution.eigenpairs.front().has_neff,
+                    "expected a valid diffused channel n_eff");
+        expect_true(diffused_channel_eigen_solution.eigenpairs.front().n_eff >
+                        diffused_channel_profile.background_index &&
+                        diffused_channel_eigen_solution.eigenpairs.front().n_eff <
+                            diffused_channel_profile.peak_index,
+                    "expected the leading diffused channel n_eff to lie between n_background and n_peak");
 
         std::cout << "waveguide_global_tests: all checks passed\n";
         return EXIT_SUCCESS;

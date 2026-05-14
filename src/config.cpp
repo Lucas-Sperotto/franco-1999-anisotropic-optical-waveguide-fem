@@ -187,12 +187,14 @@ void validate_material_model(const std::string& material_model) {
     if (material_model != "homogeneous_isotropic_constant" &&
         material_model != "planar_diffuse_isotropic_exponential" &&
         material_model != "planar_diffuse_isotropic_surface_exponential" &&
+        material_model != "channel_diffused_isotropic_circular" &&
         material_model != "rectangular_channel_step_index") {
         throw std::runtime_error(
             "Unsupported material.model '" + material_model +
             "'. Supported models: homogeneous_isotropic_constant, "
             "planar_diffuse_isotropic_exponential, "
             "planar_diffuse_isotropic_surface_exponential, "
+            "channel_diffused_isotropic_circular, "
             "rectangular_channel_step_index");
     }
 }
@@ -295,6 +297,21 @@ CaseConfig load_case_config(const std::filesystem::path& case_file) {
             parse_required_positive_double(config, "material.substrate_index");
         config.core_index =
             parse_required_positive_double(config, "material.core_index");
+        config.core_width =
+            parse_required_positive_double(config, "material.core_width");
+        config.core_height =
+            parse_required_positive_double(config, "material.core_height");
+        config.core_center_x =
+            parse_required_double(config, "material.core_center_x");
+        config.surface_y =
+            parse_required_double(config, "material.surface_y");
+    } else if (config.material_model == "channel_diffused_isotropic_circular") {
+        config.cover_index =
+            parse_required_positive_double(config, "material.cover_index");
+        config.background_index =
+            parse_required_positive_double(config, "material.background_index");
+        config.peak_index =
+            parse_required_positive_double(config, "material.peak_index");
         config.core_width =
             parse_required_positive_double(config, "material.core_width");
         config.core_height =

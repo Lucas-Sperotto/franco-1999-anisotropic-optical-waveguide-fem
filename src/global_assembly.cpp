@@ -297,4 +297,18 @@ GlobalAssemblyResult assemble_global_rectangular_channel_step_index_system(
     return result;
 }
 
+GlobalAssemblyResult assemble_global_channel_diffused_isotropic_system(
+    const Mesh& mesh,
+    const ChannelDiffusedIsotropicProfile& profile,
+    const ArticleLocalAssemblyOptions& local_options,
+    const std::string& boundary_label,
+    bool planar_x_invariant_reduction) {
+    return assemble_global_system(
+        mesh,
+        make_channel_diffused_isotropic_global_material(mesh, profile),
+        local_options,
+        boundary_label,
+        planar_x_invariant_reduction);
+}
+
 }  // namespace waveguide

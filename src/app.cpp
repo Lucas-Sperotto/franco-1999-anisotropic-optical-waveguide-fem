@@ -465,7 +465,16 @@ std::string build_modal_metrics_csv(const GeneralizedEigenSolution& solution,
               "core_energy_fraction,core_energy_in_core,core_energy_total\n";
 
     const bool rectangular_channel_case =
-        config.material_model == "rectangular_channel_step_index";
+        config.material_model == "rectangular_channel_step_index" ||
+        config.material_model == "channel_diffused_isotropic_circular";
+    const double guiding_background_index =
+        config.material_model == "channel_diffused_isotropic_circular"
+            ? config.background_index
+            : config.substrate_index;
+    const double guiding_peak_index =
+        config.material_model == "channel_diffused_isotropic_circular"
+            ? config.peak_index
+            : config.core_index;
     for (std::size_t i = 0; i < solution.eigenpairs.size(); ++i) {
         const GeneralizedEigenpair& eigenpair = solution.eigenpairs[i];
         const std::size_t mode_index = i + 1;
@@ -478,8 +487,8 @@ std::string build_modal_metrics_csv(const GeneralizedEigenSolution& solution,
                    << format_number(eigenpair.beta) << ",ok,";
             const bool guided_by_index =
                 rectangular_channel_case &&
-                eigenpair.n_eff > config.substrate_index &&
-                eigenpair.n_eff < config.core_index;
+                eigenpair.n_eff > guiding_background_index &&
+                eigenpair.n_eff < guiding_peak_index;
             stream << (guided_by_index ? "yes" : "no") << ",";
 
             const ModeConfinementDiagnostics diagnostics =
@@ -507,7 +516,8 @@ std::string build_modal_metrics_csv(const GeneralizedEigenSolution& solution,
 }
 
 double resolve_characteristic_b(const CaseConfig& config) {
-    if (config.material_model == "rectangular_channel_step_index") {
+    if (config.material_model == "rectangular_channel_step_index" ||
+        config.material_model == "channel_diffused_isotropic_circular") {
         return config.core_height;
     }
     return config.diffusion_depth;
@@ -619,6 +629,37 @@ int run_application(int argc, char** argv) {
                     << "profile_formula: n(y) = n_cover for y < 0, and "
                        "n(y) = n_s + delta_n * exp(-y/d) for y >= 0\n";
             }
+        } else if (config.material_model == "channel_diffused_isotropic_circular") {
+            const ChannelDiffusedIsotropicProfile profile{
+                config.cover_index,
+                config.background_index,
+                config.peak_index,
+                config.core_width,
+                config.core_height,
+                config.core_center_x,
+                config.surface_y,
+            };
+            global_assembly = assemble_global_channel_diffused_isotropic_system(
+                mesh,
+                profile,
+                local_options,
+                config.boundary_condition,
+                config.planar_x_invariant_reduction);
+            material_profile_summary
+                << "material_model: channel_diffused_isotropic_circular\n"
+                << "cover_index: " << format_number(profile.cover_index) << "\n"
+                << "background_index: " << format_number(profile.background_index)
+                << "\n"
+                << "peak_index: " << format_number(profile.peak_index) << "\n"
+                << "core_width: " << format_number(profile.core_width) << "\n"
+                << "core_height: " << format_number(profile.core_height) << "\n"
+                << "core_center_x: " << format_number(profile.core_center_x) << "\n"
+                << "surface_y: " << format_number(profile.surface_y) << "\n"
+                << "profile_formula: n = n_background + "
+                   "((n_background - n_peak) / L^2) * (x^2 + y^2 - L^2), "
+                   "with L from docs/05 equations (8)-(9) inside the rectangular core.\n"
+                << "coordinate_mapping_todo: confirm the figure orientation; this run maps "
+                   "the diffusion origin to (core_center_x, surface_y).\n";
         } else if (config.material_model == "rectangular_channel_step_index") {
             const RectangularChannelStepIndexProfile profile{
                 config.cover_index,
@@ -699,8 +740,9 @@ int run_application(int argc, char** argv) {
         run_summary << "status: global_dense_material_cases_ready\n";
         run_summary << "partial_scope_warning: This stage assembles and solves the "
                        "homogeneous isotropic constant case, the first planar diffuse "
-                       "isotropic variable-coefficient case, and the initial homogeneous "
-                       "rectangular channel case.\n";
+                       "isotropic variable-coefficient case, the initial homogeneous "
+                       "rectangular channel case, and the circular diffused channel "
+                       "case.\n";
         run_summary << "schema_version: " << config.schema_version << "\n";
         run_summary << "case_id: " << config.case_id << "\n";
         run_summary << "description: " << config.description << "\n";
@@ -723,6 +765,16 @@ int run_application(int argc, char** argv) {
             run_summary << "substrate_index: " << format_number(config.substrate_index)
                         << "\n";
             run_summary << "core_index: " << format_number(config.core_index) << "\n";
+            run_summary << "core_width: " << format_number(config.core_width) << "\n";
+            run_summary << "core_height: " << format_number(config.core_height) << "\n";
+            run_summary << "core_center_x: " << format_number(config.core_center_x)
+                        << "\n";
+            run_summary << "surface_y: " << format_number(config.surface_y) << "\n";
+        } else if (config.material_model == "channel_diffused_isotropic_circular") {
+            run_summary << "cover_index: " << format_number(config.cover_index) << "\n";
+            run_summary << "background_index: " << format_number(config.background_index)
+                        << "\n";
+            run_summary << "peak_index: " << format_number(config.peak_index) << "\n";
             run_summary << "core_width: " << format_number(config.core_width) << "\n";
             run_summary << "core_height: " << format_number(config.core_height) << "\n";
             run_summary << "core_center_x: " << format_number(config.core_center_x)
@@ -925,8 +977,10 @@ int run_application(int argc, char** argv) {
                            "n_eff^2 [M]{E} after assembling the element matrices from the "
                            "article-oriented local formulation.\n";
                 summary << "transition_note: The homogeneous constant case and the planar "
-                           "diffuse isotropic case share the same global assembly path; only "
-                           "the nodal material fields change before element assembly.\n";
+                           "diffuse isotropic case share the same global assembly path; "
+                           "the circular channel case also uses nodal material fields, "
+                           "with derivative terms deferred until the profile convention "
+                           "is audited.\n";
                 summary << "node_count: " << global_assembly.node_count << "\n";
                 summary << "element_count: " << global_assembly.element_count << "\n";
                 summary << "planar_x_invariant_reduction: "
@@ -957,6 +1011,16 @@ int run_application(int argc, char** argv) {
                     summary << "substrate_index: "
                             << format_number(config.substrate_index) << "\n";
                     summary << "core_index: " << format_number(config.core_index) << "\n";
+                    summary << "core_width: " << format_number(config.core_width) << "\n";
+                    summary << "core_height: " << format_number(config.core_height)
+                            << "\n";
+                } else if (config.material_model ==
+                           "channel_diffused_isotropic_circular") {
+                    summary << "cover_index: " << format_number(config.cover_index)
+                            << "\n";
+                    summary << "background_index: "
+                            << format_number(config.background_index) << "\n";
+                    summary << "peak_index: " << format_number(config.peak_index) << "\n";
                     summary << "core_width: " << format_number(config.core_width) << "\n";
                     summary << "core_height: " << format_number(config.core_height)
                             << "\n";
@@ -1051,7 +1115,7 @@ int run_application(int argc, char** argv) {
             results_dir / "README.txt",
             "This run validates local quadrature-based element matrices, global assembly,\n"
             "Dirichlet elimination on boundary nodes, and a dense generalized eigen solve\n"
-            "for either the homogeneous isotropic constant case or the planar diffuse isotropic case.\n");
+            "for homogeneous, planar diffuse, rectangular channel, and circular channel cases.\n");
 
         std::ostringstream execution_log;
         execution_log << "waveguide_solver execution log\n";
@@ -1103,7 +1167,7 @@ int run_application(int argc, char** argv) {
         }
         std::cout << "  material      : " << config.material_model << "\n";
         std::cout << "  output folder : " << output_dir.string() << "\n";
-        std::cout << "  note          : dense global solver active for constant, planar diffuse, and rectangular channel isotropic cases\n";
+        std::cout << "  note          : dense global solver active for constant, planar diffuse, rectangular channel, and circular channel isotropic cases\n";
 
         return 0;
     } catch (const std::exception& error) {
