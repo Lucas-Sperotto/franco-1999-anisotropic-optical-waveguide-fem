@@ -226,8 +226,11 @@ GeneralizedEigenSolution solve_symmetric_generalized_eigenproblem(
                                                    transpose_dense_matrix(lower_inverse)));
     transformed = symmetrize_dense_matrix(transformed);
 
+    const int jacobi_max_iter =
+        std::max(200, 5 * static_cast<int>(transformed.size()) *
+                          static_cast<int>(transformed.size()));
     const SymmetricEigenDecomposition decomposition =
-        jacobi_diagonalize_symmetric(transformed);
+        jacobi_diagonalize_symmetric(transformed, 1.0e-12, jacobi_max_iter);
 
     std::vector<std::size_t> order(decomposition.eigenvalues.size());
     std::iota(order.begin(), order.end(), 0);

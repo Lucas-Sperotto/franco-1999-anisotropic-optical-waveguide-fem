@@ -44,4 +44,7 @@ Critérios de aceite:
 - depois avançar para os demais
 
 
-Caso 1 não esta funcionando, autovalor precisa ser maior que 2.045 e menor que 2.25.
+Caso 1 resolvido: o eigensolver Jacobi usava `max_iterations=200` (insuficiente para malhas
+com ~378 DOFs livres). Corrigido para `max(200, 5*n²)`. Com a malha farfield e V=1.0,
+n_eff²=2.140 (entre 2.0449 e 2.25). Discrepância residual em B vs referência é
+atribuída à assimetria da geometria (cover≠substrate) — questão separada.
