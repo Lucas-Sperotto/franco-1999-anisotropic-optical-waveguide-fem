@@ -24,7 +24,7 @@ As referências abaixo foram preservadas na numeração citada ao longo das seç
 
 [11] U. Hempelmann, H. Herrmann, G. Mrozynski, V. Reimann, and W. Sohler, “Integrated Optical Proton Exchanged TM-Pass Polarizers in $LiNbO_3$: Modelling and Experimental Performance,” *Journal of Lightwave Technology*, vol. 13, no. 8, pp. 1750-1759, 1995.
 
-[12] C. L. S. S. Sobrinho, A. J. Giarola, “Analysis of a Dielectric Channel Waveguide Diffused in an Anisotropic Substrate with a Gaussian-Gaussian Index of Refraction Profile Using the Finite-Difference Method,” *SBMO International Microwave Conference*, Brazil, Aug., 1993, pp. 557-562.
+[12] C. L. S. S. Sobrinho, A. J. Giarola, “Analysis of a Dielectric Channel Waveguide Diffused in an Anisotropic Substrate with a Gaussian-Gaussian Index of Refraction Profile Using the Finite-Difference Method,” *SBMO International Microwave Conference*, Brazil, Aug., 1993, pp. 557-562. Arquivo local: `ref/[12] - sbmo.1993.587213.pdf`.
 
 [13] L. Torner, F. Canal and J. Hernandez-Marco, “Leaky modes in multilayer uniaxial optical waveguides,” *Applied Optics*, vol. 29, no. 18, pp. 2805-2814, 1990.
 

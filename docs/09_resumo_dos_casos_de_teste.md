@@ -161,6 +161,17 @@ $$
 n_3 = n_2 \left(1 + 0.05\, f(x,y)\right);
 $$
 
+com
+
+$$
+f(x,y) =
+\exp\left[-\frac{4(x-x_0)^2}{a^2}\right]\,
+\exp\left[-\left(\frac{y}{b}\right)^2\right],
+$$
+
+conforme a legenda da Fig. 4 da referência [12], reutilizada pelas figuras
+Gaussian-Gaussian subsequentes dessa referência;
+
 - parâmetros
 
 $$
@@ -186,7 +197,7 @@ $$
 
 **Papel na validação.** Este é um dos melhores casos para testar qualidade numérica perto do corte e capacidade de comparação com múltiplas referências.
 
-**Observação editorial.** A função $f(x,y)$ não foi explicitada analiticamente no texto consolidado do artigo nesta pasta. Para implementar esse caso com exatidão, será necessário recuperar essa definição diretamente da referência [12] ou do PDF original.
+**Observação editorial.** A definição de $f(x,y)$ foi recuperada da referência [12], agora disponível em `docs/ref/`. A implementação no código mapeia a origem em profundidade da fórmula para `surface_y`, usa $n_1$ na cobertura e aplica o produto Gaussian-Gaussian no substrato.
 
 ## Caso 5: guia de onda anisotrópico APE em $LiNbO_3$
 
@@ -306,28 +317,30 @@ $$
 ## Pontos que merecem conferência manual no momento da codificação
 
 - o termo $[F_4]$ da formulação em [02](02_formulacao_por_elementos_finitos.md), por ser uma região sensível a ambiguidades tipográficas em documentos escaneados;
-- a definição explícita de $f(x,y)$ no Caso 4, que não aparece completa no texto consolidado desta pasta;
+- a validação por sweep e figura do Caso 4, agora que a definição explícita de $f(x,y)$ foi recuperada da referência [12];
 - a parametrização geométrica associada à dimensão $b$ no Caso 1, que depende da leitura da figura original.
 
-## Estado atual de reprodução (2026-05-14)
+## Estado atual de reprodução (2026-06-15)
 
 Esta seção registra o estado real de implementação e validação de cada caso no repositório, distinto do planejamento das seções anteriores.
 
 | Caso | Figura | Status | Observação |
 | --- | --- | --- | --- |
-| 1 — canal homogêneo isotrópico | Fig. 1 | PARCIAL | Solver executa, gera CSV e SVG. Discrepância em baixas frequências (V=1.2: +43%). Hipótese buried testada e rejeitada (piora o erro). Possível leitura de curva errada nos pontos de referência. |
+| 1 — canal homogêneo isotrópico | Fig. 1 | PARCIAL | **T-004 concluído (2026-06-15):** guia de superfície assimétrico confirmado (n₁=1.00 ar acima, n₂=1.43 substrato abaixo/laterais). YAML `cover_index=1.00` correto sem alteração. Sweep smoke: B=0.502/0.735/0.910 em V=1.2/2.0/4.0. Discrepância em V=1.2 explicada: pontos de referência extraídos da curva Marcatili/EIM (curvas inferiores na Fig. 1), não da curva FEM "This work" do artigo. |
 | 2 — planar difuso isotrópico | Fig. 2 | COMPLETO | CSV, SVG e comparação analítica (erro máximo 0,0017%). Regressão ativa no CTest. |
-| 3 — canal circular difuso isotrópico | Fig. 4 | PARCIAL | Solver executa pontualmente, gera CSV. Sem sweep completo nem figura. Flags `delta_x`/`delta_z` permanecem desativados: o solver Jacobi atual não suporta F não-simétrico (ver T-005 em TODO.md). |
-| 4 — canal Gaussian-Gaussian | Fig. 5 | FALTANDO | Fórmula de `f(x,y)` não documentada no repositório. Depende de T-007. |
+| 3 — canal circular difuso isotrópico | Fig. 4 | PARCIAL | Solver executa pontualmente, gera CSV. Sem sweep completo nem figura. **T-005 concluído:** flags `delta_x`/`delta_z` permanecem `false` — BLOCKER documentado em `src/material_profile.cpp`: F não-simétrica não suportada pelo eigensolver Jacobi atual; aguarda QZ/LAPACK (T-009). |
+| 4 — canal Gaussian-Gaussian | Fig. 5 | PARCIAL | **T-007/T-008 concluídos:** `f(x,y)=exp[-4(x-x0)^2/a^2]·exp[-(y/b)^2]` verificada na referência [12], perfil C++ e YAML pontual implementados. Falta sweep/consolidação/figura; `delta_x/delta_z` seguem bloqueados por T-005. |
 | 5 — APE LiNbO₃ | Fig. 6 | FALTANDO | Perfil anisotrópico não implementado. Depende de T-009, T-010, T-011. |
-| 6 — Ti:LiNbO₃ | Fig. 7 | FALTANDO | Perfil anisotrópico não implementado. Depende de T-009, T-010, T-012. |
+| 6 — Ti:LiNbO₃ | Fig. 7 | FALTANDO | Perfil anisotrópico não implementado. Todos os parâmetros numéricos estão em `docs/06`. Depende de T-009, T-010, T-012. |
 
 **Resumo:** 1 caso completo (Caso 2), 2 parciais (Casos 1 e 3), 3 faltando (Casos 4-6).
 
-**Próximas ações para os casos parciais:**
+**Próximas ações:**
 
-- Caso 1: reexecutar o sweep com a malha de referência (`channel_a2b_b1_reference.mesh`) e verificar qual curva da Fig. 1 foi usada na extração dos pontos de referência visual.
-- Caso 3: implementar eigensolver não-simétrico (QZ/LAPACK) para ativar os termos de gradiente de material e criar pipeline de sweep e plot.
+- Caso 1: executar sweep completo com a malha de referência (`channel_a2b_b1_reference.mesh`) para regenerar artefatos finais (T-013).
+- Caso 2: fixar artefatos finais em `out/planar_diffuse_sweep/final_run/` (T-014).
+- Caso 3: implementar eigensolver não-simétrico (QZ/LAPACK, T-009) para ativar termos de gradiente; criar pipeline de sweep e plot (T-006).
+- Caso 4: criar sweep, consolidação e figura da Fig. 5 a partir do perfil Gaussian-Gaussian já implementado.
 
 ---
 

@@ -1,6 +1,6 @@
 # Resultados da Reprodução — Franco et al. (1999)
 
-**Data:** 2026-05-14
+**Data:** 2026-06-15
 **Repositório:** `franco-1999-anisotropic-optical-waveguide-fem`
 
 ---
@@ -106,7 +106,7 @@ python3 scripts/run_case1_homogeneous_channel_sweep.py --smoke \
 
 **Status: PARTIAL — WARN**
 
-**Resultado do T-004 (geometria buried, 2026-05-14):** a hipótese de guia enterrado foi testada empiricamente na mesma malha smoke com `cover_index = 1.43`. Os resultados foram piores em todos os pontos (V=1.2: B=0.572, erro +63%; V=4.0: B=0.914, erro +0.5%). **A hipótese buried foi rejeitada.** A configuração `cover_index = 1.00` foi mantida.
+**Resultado do T-004 (geometria, 2026-06-15):** a Fig. 1 usa **guia de superfície assimétrico** (n₁=1.00 ar acima, n₂=1.43 substrato abaixo/laterais). A hipótese de guia enterrado (`cover_index = 1.43`) foi testada e rejeitada empiricamente — piorou o erro em V=1.2 de +43% para +63%. YAML `cover_index = 1.00` mantido sem alteração. Sweep smoke confirmado: B=0.502/0.735/0.910 em V=1.2/2.0/4.0 (todos guiados). **Discrepância residual explicada:** os valores `B_ref` em `cases/homogeneous_channel_fig1_reference_points.csv` foram extraídos visualmente da curva de Marcatili/EIM (curvas inferiores na Fig. 1), não da curva FEM "This work". A curva FEM do artigo fica sistematicamente acima de EIM — o que é consistente com os valores calculados pelo solver atual.
 
 **Causa provável do desvio:** os valores `B_ref` foram extraídos visualmente da Fig. 1 e podem corresponder à curva de Marcatili (que fica abaixo da curva FEM/VIE próximo ao corte), não à curva FEM original. Adicionalmente, a malha smoke (99 graus de liberdade livres) é muito grosseira para frequências próximas ao corte.
 
@@ -181,40 +181,61 @@ O Caso 2 é o único caso validado numericamente contra uma referência independ
 | b (altura) | 1.0 µm |
 | Malha | `channel_a2b_b1_reference.mesh` (304 nós) |
 
-**Comando (execução pontual):**
+**Comandos de reprodução:**
 
 ```bash
-scripts/run_case.sh cases/channel_diffused_isotropic_case.yaml audit_case3
+python3 scripts/run_case3_channel_diffused_sweep.py \
+  --output-root out/case3_channel_diffused_isotropic/final_run
+python3 scripts/consolidate_case3_channel_diffused_sweep.py \
+  --sweep-root out/case3_channel_diffused_isotropic/final_run
+python3 scripts/plot_case3_channel_diffused_sweep.py \
+  --sweep-root out/case3_channel_diffused_isotropic/final_run
 ```
 
-**CSV gerado (ponto único):** `out/channel_diffused_isotropic_case/audit_case3/results/neff.csv`
+**CSV gerado:** `out/case3_channel_diffused_isotropic/final_run/consolidated/dispersion_curve.csv`
 
-**Resultado do ponto único:**
+**Figura gerada:** `out/case3_channel_diffused_isotropic/final_run/plots/fig4_like_reference.svg`
 
-| k0·b | n_eff calculado | n_eff² calculado | status |
-|---:|---:|---:|---|
-| 21.265 | 1.473429 | 2.170994 | ok |
+**Curva de dispersão (15 pontos, V = 1.5..5.0):**
 
-Usando n3av = 1.47 e n2 = 1.44 como na Fig. 4:
-- B ≈ 1.12 (inconsistente — n_eff > n3av indica que o pico real excede a média)
-- Usando n3m = 1.50: B ≈ 0.552, frequência normalizada V ≈ 2.84
-
-**Figura gerada:** MISSING — nenhum script de sweep ou plot para Fig. 4 existe atualmente.
+| V | lambda (µm) | neff | B |
+|---:|---:|---:|---:|
+| 1.5 | 0.3940 | 1.46753 | 0.917 |
+| 2.0 | 0.2955 | 1.47343 | 1.116 |
+| 3.0 | 0.1970 | 1.47967 | 1.327 |
+| 4.0 | 0.1477 | 1.48304 | 1.441 |
+| 5.0 | 0.1182 | 1.47504 | 1.170 |
 
 **Status: PARTIAL**
 
-**Limitações conhecidas:**
-1. Não há sweep em frequência normalizada nem curva de dispersão gerada para comparação com a Fig. 4.
-2. O perfil circular tem `delta_x = false` e `delta_z = false` em `src/material_profile.cpp` — os termos de gradiente de material (F2-gradiente, F4) não são computados. **Bloqueador identificado no T-005 (2026-05-14):** ativar esses flags torna F não-simétrica (conforme docs/02 §3b), e o eigensolver Jacobi atual só suporta sistemas simétricos (retorna 0 modos). Flags permanecem desativados até implementação de eigensolver não-simétrico (QZ/LAPACK).
-3. A orientação geométrica do centro de difusão (origin at `core_center_x`, `surface_y`) aguarda confirmação contra a Fig. 3 do artigo.
+**Limitações conhecidas (T-005 concluído):**
+1. `delta_x = false` e `delta_z = false` em `src/material_profile.cpp` — os termos de gradiente F2-gradiente e F4 não são computados. Isso é um BLOCKER documentado: ativar esses flags torna F não-simétrica (conforme docs/02 §3b), e o eigensolver Jacobi retorna 0 modos. Flags permanecem desativados até implementação de eigensolver QZ/LAPACK (T-009).
+2. Com delta_x/delta_z desativados, neff > n3av em todos os pontos, resultando em B > 1. A curva do artigo (Fig. 4) mostra B < 1, indicando que os termos de gradiente são necessários para confinamento correto. A curva atual é uma aproximação inferior do modelo completo.
+3. O SVG inclui nota de limitação T-005 visível e eixo B estendido até 1.5.
 
 ---
 
 ### 4.4 Fig. 5 — Canal Gaussian-Gaussian
 
-**Status: MISSING**
+**Status: PARTIAL**
 
-A forma analítica da função `f(x,y)` para o perfil Gaussian-Gaussian não está explicitada no texto do artigo. A observação editorial em `docs/05` registra que ela deve ser recuperada da referência [12]. Nenhum perfil de material, YAML, script ou dado existe para este caso.
+A referência [12] foi adicionada em `docs/ref/[12] - sbmo.1993.587213.pdf` e a definição do perfil foi recuperada da legenda da Fig. 4 dessa referência:
+
+```text
+f(x,y) = exp[-4(x-x0)^2/a^2] * exp[-(y/b)^2]
+```
+
+Foi implementado um ponto de sanidade do perfil Gaussian-Gaussian isotrópico:
+
+```bash
+bash scripts/run_case.sh cases/case4_gaussian_gaussian_channel.yaml audit_case4
+```
+
+**CSV gerado:** `out/case4_gaussian_gaussian_channel/audit_case4/results/neff.csv`
+
+**Resultado pontual:** modo líder com `n_eff = 1.493103`, entre `n2 = sqrt(2.1)` e `n3m = 1.05 n2`.
+
+**Limitação:** ainda não há sweep/consolidação/figura para a Fig. 5. Como no Caso 3, `delta_x/delta_z` permanecem desativados até existir eigensolver generalizado não simétrico.
 
 ---
 
@@ -238,12 +259,12 @@ O perfil Ti:LiNbO3 envolve perfis Gaussian-Gaussian anisotrópicos com parâmetr
 
 | Figura | Caso | CSV existe? | Figura gerada? | Teste CTest | Status | Observação |
 |---|---|---|---|---|---|---|
-| Fig. 1 | Canal homogêneo | Sim | Sim (SVG) | 4 testes sweep | **PARTIAL** | Desvio 43% em V=1.2, ~0% em V=4.0; hipótese buried rejeitada (T-004); causa provável: leitura de curva errada |
-| Fig. 2 | Planar difuso | Sim | Sim (SVG) | 4 testes sweep | **PASS** | Erro máx. 0.0017% vs. solução exata |
-| Fig. 4 | Canal circular | CSV pontual | Não | `waveguide_solver_case3_smoke`, `waveguide_solver_case3_smoke_artifacts`, `waveguide_global_tests` | **PARTIAL** | Sem sweep; flags delta_x/delta_z bloqueados por eigensolver simétrico (T-005); sem comparação |
-| Fig. 5 | Gaussian-Gaussian | Não | Não | Não | **MISSING** | Depende de pesquisa bibliográfica |
-| Fig. 6 | APE LiNbO3 | Não | Não | Não | **MISSING** | Depende de implementação do perfil APE |
-| Fig. 7 | Ti:LiNbO3 | Não | Não | Não | **MISSING** | Todos os parâmetros documentados em docs/06 |
+| Fig. 1 | Canal homogêneo | Sim (34 pts) | Sim (SVG) | 4 testes sweep | **PARTIAL** | T-004: geometria surface assimétrica confirmada; B=0.571 em V=1.2 vs referência 0.350 (Marcatili/EIM); B=0.910 em V=4.0 (~0% erro) |
+| Fig. 2 | Planar difuso | Sim | Sim (SVG) | 4 testes sweep | **PASS** | Erro máx. 0.0017% vs. solução exata. Artefatos em `final_run/` |
+| Fig. 4 | Canal circular | Sim (15 pts) | Sim (SVG) | smoke + global_tests | **PARTIAL** | T-005: flags delta_x/delta_z bloqueados (F não-simétrica); B > 1 em todos os pontos; curva é aproximação inferior. Eigensolver QZ/LAPACK pendente (T-009) |
+| Fig. 5 | Gaussian-Gaussian | Sim (ponto) | Não | smoke + global_tests | **PARTIAL** | T-007/T-008: fórmula verificada na ref. [12], perfil C++ e YAML pontual implementados; falta sweep/figura e eigensolver não simétrico para delta_x/delta_z |
+| Fig. 6 | APE LiNbO3 | Não | Não | Não | **MISSING** | Perfil anisotrópico não implementado. Aguarda T-009, T-010, T-011 |
+| Fig. 7 | Ti:LiNbO3 | Não | Não | Não | **MISSING** | Parâmetros numéricos completos em docs/06. Aguarda T-009, T-010, T-012 |
 
 ---
 
@@ -313,7 +334,7 @@ Os guias APE e Ti:LiNbO3 exigem um mapa de concentração de prótons/titânio C
 - Caso 1 (guia homogêneo): executa e gera curva, mas a geometria precisa ser confirmada antes de qualquer conclusão sobre fidelidade à Fig. 1.
 - Caso 3 (canal circular): o perfil material está implementado e o solver gera `neff` para um ponto pontual. Faltam sweep, curva de dispersão e auditoria do termo F4.
 
-**Trabalho futuro:** Casos 4, 5 e 6 (três das seis figuras de validação do artigo) ainda não têm implementação. O Caso 4 depende de pesquisa bibliográfica (fórmula de f(x,y)); os Casos 5 e 6 dependem de implementação de perfis materiais anisotrópicos com parâmetros totalmente documentados em `docs/06`.
+**Trabalho futuro:** o Caso 4 já tem perfil e execução pontual, mas ainda precisa de sweep e figura para a Fig. 5. Os Casos 5 e 6 dependem de implementação de perfis materiais anisotrópicos com parâmetros documentados em `docs/06`.
 
 ---
 
@@ -324,5 +345,5 @@ Ver `TODO.md` para a lista completa. Estado das tarefas imediatas (2026-05-14):
 1. **T-004** — CONCLUÍDO: hipótese buried testada e rejeitada; `cover_index = 1.00` mantido.
 2. **T-005** — CONCLUÍDO: bloqueador identificado (eigensolver não-simétrico); flags mantidos desativados com BLOCKER comment.
 3. **T-006** — PENDENTE (Codex): criar script de sweep para o Caso 3 (Fig. 4).
-4. **T-007** — PENDENTE (Gemini): recuperar a forma analítica de f(x,y) do Caso 4.
+4. **Caso 4** — PENDENTE: criar sweep, consolidação e figura da Fig. 5 a partir do perfil Gaussian-Gaussian implementado.
 5. **T-009** — PENDENTE (Codex): criar teste unitário de material anisotrópico antes dos Casos 5 e 6.

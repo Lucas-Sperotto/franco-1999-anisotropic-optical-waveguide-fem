@@ -38,3 +38,42 @@ Para o sweep do Caso 1, a pasta `out/case1_homogeneous_channel/<run_label>/` pas
 - `study_manifest.csv` e `point_manifest.csv`: índices rastreáveis do sweep;
 - `consolidated/`: CSVs consolidados com `V`, `B`, `n_eff`, `beta`, indicação se o ponto já está acima do cutoff e, quando disponível, comparação com pontos externos da Fig. 1;
 - `plots/`: gráfico SVG preliminar em frequência normalizada versus constante de propagação normalizada, já no mesmo par de grandezas usado pela figura do artigo.
+
+## Saídas finais e exploratórias
+
+As saídas finais atualmente reprodutíveis ficam nestas pastas fixas:
+
+- `out/case1_homogeneous_channel/final_run/`
+- `out/planar_diffuse_sweep/final_run/`
+- `out/case3_channel_diffused_isotropic/final_run/`
+- `out/case4_gaussian_gaussian_channel/final_point/`
+
+Essas pastas são as fontes preferenciais para relatórios e conferência
+externa. Cada uma deve conter os manifests do sweep, os YAMLs gerados, os
+CSV consolidados em `consolidated/` e as figuras em `plots/`, quando se tratar
+de sweep. O Caso 4 ainda é apenas execução pontual de sanidade, portanto seus
+artefatos ficam diretamente em `results/`.
+
+As demais pastas em `out/` são execuções exploratórias, auditorias pontuais,
+testes de hipótese ou entregas históricas. Elas não devem ser apagadas sem
+decisão explícita, porque podem estar referenciadas em relatórios anteriores,
+mas também não são necessárias para reproduzir o estado final dos Casos 1, 2,
+3 e o ponto de sanidade do Caso 4.
+
+O fluxo orquestrado atual é:
+
+```bash
+bash scripts/run_all.sh
+python3 scripts/plot_all.py
+```
+
+Para uma verificação rápida sem sobrescrever as pastas finais:
+
+```bash
+bash scripts/run_all.sh --smoke
+python3 scripts/plot_all.py --smoke
+```
+
+O `plot_all.py` grava um manifesto em `out/reproduction_artifacts.csv` com os
+artefatos finais verificados. Esse CSV é gerado automaticamente e não substitui
+os CSV científicos de cada caso.
