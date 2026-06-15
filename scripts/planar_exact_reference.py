@@ -6,7 +6,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from scipy import optimize, special
+import mpmath as mp
 
 
 @dataclass(frozen=True)
@@ -15,6 +15,52 @@ class PlanarExactReferenceConfig:
     substrate_index: float
     cover_index: float
     delta_index: float
+
+
+def bessel_j(order: float, argument: float) -> float:
+    return float(mp.besselj(order, argument))
+
+
+def bisect_root(
+    function,
+    lower: float,
+    upper: float,
+    *,
+    xtol: float = 1.0e-12,
+    rtol: float = 1.0e-12,
+    maxiter: int = 500,
+) -> float:
+    lower_value = function(lower)
+    upper_value = function(upper)
+    if not math.isfinite(lower_value) or not math.isfinite(upper_value):
+        raise ValueError("Cannot bisect a non-finite bracket")
+    if lower_value == 0.0:
+        return lower
+    if upper_value == 0.0:
+        return upper
+    if lower_value * upper_value > 0.0:
+        raise ValueError("Bisection requires a sign-changing bracket")
+
+    left = lower
+    right = upper
+    left_value = lower_value
+
+    for _ in range(maxiter):
+        midpoint = 0.5 * (left + right)
+        midpoint_value = function(midpoint)
+        if not math.isfinite(midpoint_value):
+            raise ValueError("Cannot bisect through a non-finite residual")
+        if midpoint_value == 0.0:
+            return midpoint
+        if abs(right - left) <= max(xtol, rtol * abs(midpoint)):
+            return midpoint
+        if left_value * midpoint_value < 0.0:
+            right = midpoint
+        else:
+            left = midpoint
+            left_value = midpoint_value
+
+    raise ValueError("Bisection did not converge")
 
 
 def characteristic_te_order_residual(
@@ -46,11 +92,11 @@ def characteristic_te_order_residual(
         raise ValueError("The exact benchmark requires a positive delta_epsilon")
 
     xi = 2.0 * k0_d * math.sqrt(delta_epsilon)
-    j_nu = special.jv(nu, xi)
+    j_nu = bessel_j(nu, xi)
     if not math.isfinite(j_nu) or abs(j_nu) <= 1.0e-14:
         return math.nan
 
-    lhs = (special.jv(nu - 1.0, xi) - special.jv(nu + 1.0, xi)) / j_nu
+    lhs = (bessel_j(nu - 1.0, xi) - bessel_j(nu + 1.0, xi)) / j_nu
     p_cover_times_d = math.sqrt(k0_d * k0_d * (epsilon_s - epsilon_cover) + 0.25 * nu * nu)
     rhs = -2.0 * p_cover_times_d / (k0_d * math.sqrt(delta_epsilon))
     return lhs - rhs
@@ -90,7 +136,7 @@ def solve_planar_exact_te_modes(
 
         if previous_nu is not None and previous_value is not None and previous_value * value < 0.0:
             try:
-                root = optimize.brentq(
+                root = bisect_root(
                     lambda trial_nu: characteristic_te_order_residual(
                         trial_nu, k0_d=k0_d, config=config
                     ),

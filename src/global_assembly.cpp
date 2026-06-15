@@ -311,4 +311,18 @@ GlobalAssemblyResult assemble_global_channel_diffused_isotropic_system(
         planar_x_invariant_reduction);
 }
 
+GlobalAssemblyResult assemble_global_channel_gaussian_gaussian_system(
+    const Mesh& mesh,
+    const ChannelGaussianGaussianProfile& profile,
+    const ArticleLocalAssemblyOptions& local_options,
+    const std::string& boundary_label,
+    bool planar_x_invariant_reduction) {
+    return assemble_global_system(
+        mesh,
+        make_channel_gaussian_gaussian_global_material(mesh, profile),
+        local_options,
+        boundary_label,
+        planar_x_invariant_reduction);
+}
+
 }  // namespace waveguide

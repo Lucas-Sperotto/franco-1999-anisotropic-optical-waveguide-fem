@@ -1,0 +1,29 @@
+schema_version: 1
+
+case:
+  id: case04_gaussian_gaussian_channel
+  description: "Case 4 isotropic diffused channel with Gaussian-Gaussian index profile from reference [12]"
+
+mesh:
+  file: ../meshes/channel_a2b_b1_reference.mesh
+
+material:
+  model: channel_diffused_isotropic_gaussian_gaussian
+  cover_index: 1.00
+  background_index: 1.449137674619
+  peak_index: 1.521594558350
+  core_width: 1.00
+  core_height: 1.00
+  core_center_x: 0.00
+  surface_y: 0.00
+
+boundary:
+  condition: dirichlet_zero_on_boundary_nodes
+
+solver:
+  requested_modes: 4
+  wavelength_um: 0.185580171355
+  planar_x_invariant_reduction: false
+
+output:
+  tag: case4_gaussian_gaussian_channel

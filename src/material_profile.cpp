@@ -59,6 +59,23 @@ void validate_channel_diffused_isotropic_profile(
     }
 }
 
+void validate_channel_gaussian_gaussian_profile(
+    const ChannelGaussianGaussianProfile& profile) {
+    if (profile.cover_index <= 0.0 || profile.background_index <= 0.0 ||
+        profile.peak_index <= 0.0) {
+        throw std::runtime_error(
+            "The Gaussian-Gaussian channel profile requires positive indices");
+    }
+    if (profile.peak_index <= profile.background_index) {
+        throw std::runtime_error(
+            "The Gaussian-Gaussian channel profile requires peak_index > background_index");
+    }
+    if (profile.core_width <= 0.0 || profile.core_height <= 0.0) {
+        throw std::runtime_error(
+            "The Gaussian-Gaussian channel profile requires positive core dimensions");
+    }
+}
+
 bool is_point_inside_rectangular_channel_core(
     const Point2D& point,
     const RectangularChannelStepIndexProfile& profile) {
@@ -206,6 +223,35 @@ double evaluate_channel_diffused_isotropic_index_squared(
     return refractive_index * refractive_index;
 }
 
+double evaluate_channel_gaussian_gaussian_index(
+    const Point2D& point,
+    const ChannelGaussianGaussianProfile& profile) {
+    validate_channel_gaussian_gaussian_profile(profile);
+
+    if (point.y < profile.surface_y) {
+        return profile.cover_index;
+    }
+
+    const double x = point.x - profile.core_center_x;
+    const double y = point.y - profile.surface_y;
+    const double gaussian_x =
+        std::exp(-4.0 * x * x / (profile.core_width * profile.core_width));
+    const double gaussian_y =
+        std::exp(-(y * y) / (profile.core_height * profile.core_height));
+    const double profile_weight = gaussian_x * gaussian_y;
+
+    return profile.background_index +
+           (profile.peak_index - profile.background_index) * profile_weight;
+}
+
+double evaluate_channel_gaussian_gaussian_index_squared(
+    const Point2D& point,
+    const ChannelGaussianGaussianProfile& profile) {
+    const double refractive_index =
+        evaluate_channel_gaussian_gaussian_index(point, profile);
+    return refractive_index * refractive_index;
+}
+
 GlobalNodalMaterialFields make_homogeneous_isotropic_global_material(
     const Mesh& mesh,
     double refractive_index) {
@@ -322,6 +368,32 @@ GlobalNodalMaterialFields make_channel_diffused_isotropic_global_material(
     for (const MeshNode& node : mesh.nodes) {
         const double refractive_index_squared =
             evaluate_channel_diffused_isotropic_index_squared(node.point, profile);
+        fields.nx2_by_node_id.emplace(node.id, refractive_index_squared);
+        fields.nz2_by_node_id.emplace(node.id, refractive_index_squared);
+        fields.gz2_by_node_id.emplace(node.id, 1.0 / refractive_index_squared);
+    }
+
+    return fields;
+}
+
+GlobalNodalMaterialFields make_channel_gaussian_gaussian_global_material(
+    const Mesh& mesh,
+    const ChannelGaussianGaussianProfile& profile) {
+    validate_channel_gaussian_gaussian_profile(profile);
+
+    GlobalNodalMaterialFields fields;
+    // BLOCKER (T-005/T-008): this profile varies in x and y, so the gradient
+    // terms should eventually be active. They are kept disabled until the
+    // non-symmetric generalized eigensolver needed by docs/02 §3b is available.
+    fields.delta_x = false;
+    fields.delta_z = false;
+    fields.homogeneous = false;
+    fields.isotropic = true;
+    fields.model_label = "channel_diffused_isotropic_gaussian_gaussian";
+
+    for (const MeshNode& node : mesh.nodes) {
+        const double refractive_index_squared =
+            evaluate_channel_gaussian_gaussian_index_squared(node.point, profile);
         fields.nx2_by_node_id.emplace(node.id, refractive_index_squared);
         fields.nz2_by_node_id.emplace(node.id, refractive_index_squared);
         fields.gz2_by_node_id.emplace(node.id, 1.0 / refractive_index_squared);

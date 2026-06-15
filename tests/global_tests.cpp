@@ -192,6 +192,53 @@ int main() {
                         constant_generic.matrices.F_full),
                     0.0, "constant wrapper/generic F_full");
 
+        waveguide::GlobalNodalMaterialFields anisotropic_fields;
+        anisotropic_fields.delta_x = false;
+        anisotropic_fields.delta_z = false;
+        anisotropic_fields.homogeneous = true;
+        anisotropic_fields.isotropic = false;
+        anisotropic_fields.model_label = "constant_anisotropic_contract_test";
+        for (const waveguide::MeshNode& node : constant_mesh.nodes) {
+            anisotropic_fields.nx2_by_node_id.emplace(node.id, 2.30 * 2.30);
+            anisotropic_fields.nz2_by_node_id.emplace(node.id, 2.10 * 2.10);
+            anisotropic_fields.gz2_by_node_id.emplace(node.id, 1.0 / (2.10 * 2.10));
+        }
+
+        const waveguide::GlobalAssemblyResult anisotropic_assembly =
+            waveguide::assemble_global_system(
+                constant_mesh, anisotropic_fields, local_options);
+
+        expect_true(
+            waveguide::is_dense_matrix_symmetric(anisotropic_assembly.matrices.M_full),
+            "constant anisotropic M_full should remain symmetric");
+        expect_true(
+            waveguide::is_dense_matrix_symmetric(anisotropic_assembly.matrices.F_full),
+            "constant anisotropic F_full should remain symmetric");
+        expect_true(
+            waveguide::max_abs_dense_matrix_difference(
+                anisotropic_assembly.matrices.M_full,
+                constant_generic.matrices.M_full) > 1.0e-6,
+            "anisotropic M_full should differ from the equivalent isotropic assembly");
+        expect_true(
+            waveguide::max_abs_dense_matrix_difference(
+                anisotropic_assembly.matrices.F_full,
+                constant_generic.matrices.F_full) > 1.0e-6,
+            "anisotropic F_full should differ from the equivalent isotropic assembly");
+
+        const waveguide::GeneralizedEigenSolution anisotropic_eigen_solution =
+            waveguide::solve_generalized_eigenproblem_dense(
+                anisotropic_assembly.matrices.F_reduced,
+                anisotropic_assembly.matrices.M_reduced,
+                local_options.k0,
+                1);
+
+        expect_true(anisotropic_eigen_solution.eigenpairs.size() == 1,
+                    "expected one anisotropic contract eigenpair");
+        expect_true(anisotropic_eigen_solution.eigenpairs.front().has_neff,
+                    "expected a valid n_eff for the anisotropic contract test");
+        expect_true(anisotropic_eigen_solution.transformed_matrix_is_symmetric,
+                    "constant anisotropic transformed matrix should be symmetric");
+
         const waveguide::GeneralizedEigenSolution constant_eigen_solution =
             waveguide::solve_generalized_eigenproblem_dense(
                 constant_wrapper.matrices.F_reduced,
@@ -460,6 +507,80 @@ int main() {
                         diffused_channel_eigen_solution.eigenpairs.front().n_eff <
                             diffused_channel_profile.peak_index,
                     "expected the leading diffused channel n_eff to lie between n_background and n_peak");
+
+        const double gaussian_background_index = std::sqrt(2.1);
+        const waveguide::ChannelGaussianGaussianProfile gaussian_channel_profile{
+            1.0,
+            gaussian_background_index,
+            1.05 * gaussian_background_index,
+            1.0,
+            1.0,
+            0.0,
+            0.0,
+        };
+        expect_near(
+            waveguide::evaluate_channel_gaussian_gaussian_index(
+                waveguide::Point2D{0.0, 0.0}, gaussian_channel_profile),
+            gaussian_channel_profile.peak_index,
+            "Gaussian-Gaussian channel center index");
+        expect_near(
+            waveguide::evaluate_channel_gaussian_gaussian_index(
+                waveguide::Point2D{0.5, 0.0}, gaussian_channel_profile),
+            gaussian_channel_profile.background_index +
+                (gaussian_channel_profile.peak_index -
+                 gaussian_channel_profile.background_index) *
+                    std::exp(-1.0),
+            "Gaussian-Gaussian channel x half-width index");
+        expect_near(
+            waveguide::evaluate_channel_gaussian_gaussian_index(
+                waveguide::Point2D{0.0, 1.0}, gaussian_channel_profile),
+            gaussian_channel_profile.background_index +
+                (gaussian_channel_profile.peak_index -
+                 gaussian_channel_profile.background_index) *
+                    std::exp(-1.0),
+            "Gaussian-Gaussian channel depth b index");
+        expect_near(
+            waveguide::evaluate_channel_gaussian_gaussian_index(
+                waveguide::Point2D{0.0, -0.5}, gaussian_channel_profile),
+            gaussian_channel_profile.cover_index,
+            "Gaussian-Gaussian channel cover index");
+
+        const double gaussian_frequency_normalized = 5.0;
+        const double gaussian_channel_k0 =
+            gaussian_frequency_normalized * kPi /
+            (gaussian_channel_profile.core_height *
+             std::sqrt(gaussian_channel_profile.peak_index *
+                           gaussian_channel_profile.peak_index -
+                       gaussian_channel_profile.background_index *
+                           gaussian_channel_profile.background_index));
+        const waveguide::ArticleLocalAssemblyOptions gaussian_channel_local_options =
+            waveguide::make_default_article_local_assembly_options(gaussian_channel_k0);
+        const waveguide::GlobalAssemblyResult gaussian_channel_assembly =
+            waveguide::assemble_global_channel_gaussian_gaussian_system(
+                diffused_channel_mesh,
+                gaussian_channel_profile,
+                gaussian_channel_local_options);
+
+        expect_true(
+            waveguide::is_dense_matrix_symmetric(
+                gaussian_channel_assembly.matrices.M_full),
+            "Gaussian-Gaussian channel M_full should be symmetric while gradient flags are disabled");
+        expect_true(
+            waveguide::is_dense_matrix_symmetric(
+                gaussian_channel_assembly.matrices.F_full),
+            "Gaussian-Gaussian channel F_full should be symmetric while gradient flags are disabled");
+
+        const waveguide::GeneralizedEigenSolution gaussian_channel_eigen_solution =
+            waveguide::solve_generalized_eigenproblem_dense(
+                gaussian_channel_assembly.matrices.F_reduced,
+                gaussian_channel_assembly.matrices.M_reduced,
+                gaussian_channel_local_options.k0,
+                1);
+
+        expect_true(gaussian_channel_eigen_solution.eigenpairs.size() == 1,
+                    "expected one Gaussian-Gaussian channel eigenpair");
+        expect_true(gaussian_channel_eigen_solution.eigenpairs.front().has_neff,
+                    "expected a valid Gaussian-Gaussian channel n_eff");
 
         std::cout << "waveguide_global_tests: all checks passed\n";
         return EXIT_SUCCESS;

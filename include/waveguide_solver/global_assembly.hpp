@@ -81,5 +81,11 @@ GlobalAssemblyResult assemble_global_channel_diffused_isotropic_system(
     const ArticleLocalAssemblyOptions& local_options,
     const std::string& boundary_label = "dirichlet_zero_on_boundary_nodes",
     bool planar_x_invariant_reduction = false);
+GlobalAssemblyResult assemble_global_channel_gaussian_gaussian_system(
+    const Mesh& mesh,
+    const ChannelGaussianGaussianProfile& profile,
+    const ArticleLocalAssemblyOptions& local_options,
+    const std::string& boundary_label = "dirichlet_zero_on_boundary_nodes",
+    bool planar_x_invariant_reduction = false);
 
 }  // namespace waveguide

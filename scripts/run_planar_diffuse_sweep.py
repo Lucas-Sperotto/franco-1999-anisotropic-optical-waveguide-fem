@@ -77,6 +77,29 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Run a reduced sweep for automated checks",
     )
+    parser.add_argument(
+        "--k0-b-values",
+        default=None,
+        help="Comma-separated k0*b values. Overrides the built-in full/smoke grids.",
+    )
+    parser.add_argument(
+        "--k0-b-min",
+        type=float,
+        default=None,
+        help="Lower bound for a generated k0*b grid.",
+    )
+    parser.add_argument(
+        "--k0-b-max",
+        type=float,
+        default=None,
+        help="Upper bound for a generated k0*b grid.",
+    )
+    parser.add_argument(
+        "--k0-b-step",
+        type=float,
+        default=None,
+        help="Step for a generated k0*b grid.",
+    )
     return parser.parse_args()
 
 
@@ -120,6 +143,45 @@ def load_yaml_like_case(case_path: Path) -> dict[str, str]:
 
 def format_value_label(value: float) -> str:
     return f"{value:.2f}".replace(".", "p")
+
+
+def parse_float_values(raw_values: str) -> list[float]:
+    values = [float(value.strip()) for value in raw_values.split(",") if value.strip()]
+    if not values:
+        raise ValueError("The custom k0*b list cannot be empty")
+    return values
+
+
+def build_linear_values(value_min: float, value_max: float, step: float) -> list[float]:
+    if step <= 0.0:
+        raise ValueError("The generated k0*b grid requires a positive step")
+    if value_max < value_min:
+        raise ValueError("The generated k0*b grid requires max >= min")
+
+    values: list[float] = []
+    current = value_min
+    while current <= value_max + 1.0e-12:
+        values.append(round(current, 10))
+        current += step
+    return values
+
+
+def resolve_k0_b_values(args: argparse.Namespace) -> list[float]:
+    if args.k0_b_values:
+        values = parse_float_values(args.k0_b_values)
+    elif args.k0_b_min is not None or args.k0_b_max is not None or args.k0_b_step is not None:
+        values = build_linear_values(
+            args.k0_b_min if args.k0_b_min is not None else FULL_K0_B_VALUES[0],
+            args.k0_b_max if args.k0_b_max is not None else FULL_K0_B_VALUES[-1],
+            args.k0_b_step if args.k0_b_step is not None else 5.0,
+        )
+    else:
+        values = SMOKE_K0_B_VALUES if args.smoke else FULL_K0_B_VALUES
+
+    unique_values = sorted(set(values))
+    if any(value <= 0.0 for value in unique_values):
+        raise ValueError("The planar sweep requires positive k0*b values")
+    return unique_values
 
 
 def compute_k0(wavelength_um: float) -> float:
@@ -241,7 +303,7 @@ def main() -> None:
     assumed_b = float(template_entries["material.diffusion_depth"])
     if assumed_b <= 0.0:
         raise ValueError("The planar sweep requires a positive material.diffusion_depth")
-    k0_b_values = SMOKE_K0_B_VALUES if args.smoke else FULL_K0_B_VALUES
+    k0_b_values = resolve_k0_b_values(args)
     studies = SMOKE_STUDIES if args.smoke else FULL_STUDIES
 
     study_manifest_path = sweep_root / "study_manifest.csv"

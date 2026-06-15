@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
 from pathlib import Path
 
 
@@ -36,6 +37,27 @@ def parse_args() -> argparse.Namespace:
             "Defaults to consolidated/marcatili_ex11_reference.csv when present."
         ),
     )
+    parser.add_argument(
+        "--hide-reference-points",
+        action="store_true",
+        help="Do not draw the approximate visual points digitized from Fig. 1.",
+    )
+    parser.add_argument(
+        "--legend-y-offset",
+        type=float,
+        default=0.0,
+        help="Additional vertical offset, in SVG pixels, applied to the legend block.",
+    )
+    parser.add_argument(
+        "--output-name",
+        default="fig1_like_reference.svg",
+        help="SVG file name written under <sweep-root>/plots.",
+    )
+    parser.add_argument(
+        "--show-unguided-fem-points",
+        action="store_true",
+        help="Draw FEM points marked as unguided in reference_dispersion.csv.",
+    )
     return parser.parse_args()
 
 
@@ -59,6 +81,42 @@ def map_value(
 
 def build_polyline(points: list[tuple[float, float]]) -> str:
     return " ".join(f"{x:.2f},{y:.2f}" for x, y in points)
+
+
+def build_even_ticks(value_min: float, value_max: float, count: int) -> list[float]:
+    if count <= 1:
+        return [value_min]
+    step = (value_max - value_min) / float(count - 1)
+    return [value_min + step * index for index in range(count)]
+
+
+def padded_max(values: list[float], minimum: float) -> float:
+    if not values:
+        return minimum
+    return max(minimum, max(values) * 1.10)
+
+
+def format_tick(value: float, value_max: float) -> str:
+    if value_max >= 10.0:
+        return f"{value:.0f}"
+    if value_max >= 1.0:
+        return f"{value:.1f}"
+    return f"{value:.3f}"
+
+
+def read_finite_point(
+    row: dict[str, str],
+    x_key: str,
+    y_key: str,
+) -> tuple[float, float] | None:
+    try:
+        x_value = float(row[x_key])
+        y_value = float(row[y_key])
+    except (KeyError, ValueError):
+        return None
+    if not math.isfinite(x_value) or not math.isfinite(y_value):
+        return None
+    return x_value, y_value
 
 
 def append_grid_and_ticks(
@@ -94,6 +152,121 @@ def append_grid_and_ticks(
         )
 
 
+def generate_error_svg(error_rows: list[dict[str, str]], output_path: Path) -> None:
+    exact_points = [
+        point
+        for row in error_rows
+        if row.get("abs_error_vs_exact_percent", "")
+        for point in [read_finite_point(row, "normalized_frequency", "abs_error_vs_exact_percent")]
+        if point is not None
+    ]
+    closed_form_points = [
+        point
+        for row in error_rows
+        if row.get("abs_error_vs_closed_form_percent", "")
+        for point in [
+            read_finite_point(
+                row,
+                "normalized_frequency",
+                "abs_error_vs_closed_form_percent",
+            )
+        ]
+        if point is not None
+    ]
+    exact_points.sort()
+    closed_form_points.sort()
+    all_points = exact_points + closed_form_points
+    if not all_points:
+        return
+
+    x_min = min(0.0, min(point[0] for point in all_points))
+    x_max = max(4.0, max(point[0] for point in all_points))
+    y_min = 0.0
+    y_max = padded_max([point[1] for point in all_points], minimum=1.0)
+
+    width = 920
+    height = 600
+    left = 90
+    right = 50
+    top = 78
+    bottom = 78
+    plot_left = left
+    plot_right = width - right
+    plot_top = top
+    plot_bottom = height - bottom
+
+    svg_parts = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">',
+        f'<rect x="0" y="0" width="{width}" height="{height}" fill="#ffffff"/>',
+        '<text x="460" y="28" text-anchor="middle" font-size="21" font-family="Arial">Caso 1 - Erro relativo vs frequência</text>',
+        '<text x="460" y="50" text-anchor="middle" font-size="13" fill="#555" font-family="Arial">Comparação do FEM Ex-like contra a referência auxiliar de Marcatili Ex11.</text>',
+        f'<line x1="{plot_left}" y1="{plot_bottom}" x2="{plot_right}" y2="{plot_bottom}" stroke="#333" stroke-width="1.5"/>',
+        f'<line x1="{plot_left}" y1="{plot_bottom}" x2="{plot_left}" y2="{plot_top}" stroke="#333" stroke-width="1.5"/>',
+        f'<text x="{width / 2:.1f}" y="{height - 20}" text-anchor="middle" font-size="16" font-family="Arial">Frequência normalizada</text>',
+        f'<text x="28" y="{height / 2:.1f}" transform="rotate(-90 28 {height / 2:.1f})" text-anchor="middle" font-size="16" font-family="Arial">Erro relativo absoluto (%)</text>',
+    ]
+
+    x_ticks = build_even_ticks(x_min, x_max, 6)
+    y_ticks = build_even_ticks(y_min, y_max, 6)
+    for x_tick in x_ticks:
+        x_pixel = map_value(x_tick, x_min, x_max, plot_left, plot_right)
+        svg_parts.append(
+            f'<line x1="{x_pixel:.2f}" y1="{plot_top}" x2="{x_pixel:.2f}" y2="{plot_bottom}" stroke="#e6e6e6" stroke-width="1"/>'
+        )
+        svg_parts.append(
+            f'<line x1="{x_pixel:.2f}" y1="{plot_bottom}" x2="{x_pixel:.2f}" y2="{plot_bottom + 6}" stroke="#333" stroke-width="1"/>'
+        )
+        svg_parts.append(
+            f'<text x="{x_pixel:.2f}" y="{plot_bottom + 24}" text-anchor="middle" font-size="12" font-family="Arial">{x_tick:.1f}</text>'
+        )
+
+    for y_tick in y_ticks:
+        y_pixel = map_value(y_tick, y_min, y_max, plot_bottom, plot_top)
+        svg_parts.append(
+            f'<line x1="{plot_left}" y1="{y_pixel:.2f}" x2="{plot_right}" y2="{y_pixel:.2f}" stroke="#e6e6e6" stroke-width="1"/>'
+        )
+        svg_parts.append(
+            f'<line x1="{plot_left - 6}" y1="{y_pixel:.2f}" x2="{plot_left}" y2="{y_pixel:.2f}" stroke="#333" stroke-width="1"/>'
+        )
+        svg_parts.append(
+            f'<text x="{plot_left - 10}" y="{y_pixel + 4:.2f}" text-anchor="end" font-size="12" font-family="Arial">{format_tick(y_tick, y_max)}</text>'
+        )
+
+    series = [
+        ("Marcatili exact", "#111111", "", exact_points),
+        ("Marcatili closed-form", "#d23b3b", "8 6", closed_form_points),
+    ]
+    legend_y = plot_top + 24
+    for label, color, dasharray, points in series:
+        if not points:
+            continue
+        polyline_points = [
+            (
+                map_value(x_value, x_min, x_max, plot_left, plot_right),
+                map_value(y_value, y_min, y_max, plot_bottom, plot_top),
+            )
+            for x_value, y_value in points
+        ]
+        dash = f' stroke-dasharray="{dasharray}"' if dasharray else ""
+        svg_parts.append(
+            f'<polyline fill="none" stroke="{color}" stroke-width="2.2"{dash} points="{build_polyline(polyline_points)}"/>'
+        )
+        for x_pixel, y_pixel in polyline_points:
+            svg_parts.append(
+                f'<circle cx="{x_pixel:.2f}" cy="{y_pixel:.2f}" r="3.0" fill="{color}"/>'
+            )
+        svg_parts.append(
+            f'<line x1="{plot_right - 220}" y1="{legend_y}" x2="{plot_right - 184}" y2="{legend_y}" stroke="{color}" stroke-width="2.2"{dash}/>'
+        )
+        svg_parts.append(
+            f'<text x="{plot_right - 170}" y="{legend_y + 4}" font-size="13" font-family="Arial">erro vs {label}</text>'
+        )
+        legend_y += 24
+
+    svg_parts.append("</svg>")
+    output_path.write_text("\n".join(svg_parts), encoding="utf-8")
+
+
 def main() -> None:
     args = parse_args()
     sweep_root = Path(args.sweep_root).resolve()
@@ -103,12 +276,13 @@ def main() -> None:
 
     reference_rows = read_csv_rows(consolidated_dir / "reference_dispersion.csv")
     reference_points_path = None
-    if args.reference_points is not None:
-        reference_points_path = Path(args.reference_points).resolve()
-    else:
-        candidate = consolidated_dir / "fig1_reference_points.csv"
-        if candidate.exists():
-            reference_points_path = candidate
+    if not args.hide_reference_points:
+        if args.reference_points is not None:
+            reference_points_path = Path(args.reference_points).resolve()
+        else:
+            candidate = consolidated_dir / "fig1_reference_points.csv"
+            if candidate.exists():
+                reference_points_path = candidate
 
     external_reference_rows = (
         read_csv_rows(reference_points_path) if reference_points_path and reference_points_path.exists() else []
@@ -127,6 +301,10 @@ def main() -> None:
         if marcatili_reference_path and marcatili_reference_path.exists()
         else []
     )
+    error_comparison_path = consolidated_dir / "fem_vs_marcatili_ex11.csv"
+    error_comparison_rows = (
+        read_csv_rows(error_comparison_path) if error_comparison_path.exists() else []
+    )
 
     fem_points = [
         (float(row["normalized_frequency"]), float(row["normalized_beta"]))
@@ -134,6 +312,7 @@ def main() -> None:
         if row["status"] == "ok"
         and row["normalized_beta"]
         and float(row["normalized_beta"]) >= FIG1_Y_MIN
+        and (args.show_unguided_fem_points or row.get("guided", "") == "yes")
     ]
     fem_points.sort()
 
@@ -144,16 +323,20 @@ def main() -> None:
     external_points.sort()
 
     marcatili_exact_points = [
-        (float(row["normalized_frequency"]), float(row["normalized_beta"]))
+        point
         for row in marcatili_reference_rows
         if row["solver_model"] == "exact"
+        for point in [read_finite_point(row, "normalized_frequency", "normalized_beta")]
+        if point is not None
     ]
     marcatili_exact_points.sort()
 
     marcatili_closed_form_points = [
-        (float(row["normalized_frequency"]), float(row["normalized_beta"]))
+        point
         for row in marcatili_reference_rows
         if row["solver_model"] == "closed_form"
+        for point in [read_finite_point(row, "normalized_frequency", "normalized_beta")]
+        if point is not None
     ]
     marcatili_closed_form_points.sort()
 
@@ -167,6 +350,10 @@ def main() -> None:
     plot_right = width - right
     plot_top = top
     plot_bottom = height - bottom
+    legend_top = plot_top + args.legend_y_offset
+    legend_line_x1 = plot_right - 210
+    legend_line_x2 = plot_right - 176
+    legend_text_x = plot_right - 162
 
     svg_parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">',
@@ -200,10 +387,10 @@ def main() -> None:
             f'<polyline fill="none" stroke="#1b6ef3" stroke-width="2.4" points="{build_polyline(polyline_points)}"/>'
         )
         svg_parts.append(
-            f'<line x1="{plot_right - 210}" y1="{plot_top + 22}" x2="{plot_right - 176}" y2="{plot_top + 22}" stroke="#1b6ef3" stroke-width="2.4"/>'
+            f'<line x1="{legend_line_x1}" y1="{legend_top + 22}" x2="{legend_line_x2}" y2="{legend_top + 22}" stroke="#1b6ef3" stroke-width="2.4"/>'
         )
         svg_parts.append(
-            f'<text x="{plot_right - 162}" y="{plot_top + 26}" font-size="13" font-family="Arial">FEM Ex-like</text>'
+            f'<text x="{legend_text_x}" y="{legend_top + 26}" font-size="13" font-family="Arial">FEM Ex-like</text>'
         )
 
     if marcatili_exact_points:
@@ -216,10 +403,10 @@ def main() -> None:
             f'<polyline fill="none" stroke="#111111" stroke-width="2.0" points="{build_polyline(polyline_points)}"/>'
         )
         svg_parts.append(
-            f'<line x1="{plot_right - 210}" y1="{plot_top + 48}" x2="{plot_right - 176}" y2="{plot_top + 48}" stroke="#111111" stroke-width="2.0"/>'
+            f'<line x1="{legend_line_x1}" y1="{legend_top + 48}" x2="{legend_line_x2}" y2="{legend_top + 48}" stroke="#111111" stroke-width="2.0"/>'
         )
         svg_parts.append(
-            f'<text x="{plot_right - 162}" y="{plot_top + 52}" font-size="13" font-family="Arial">Marcatili exact Ex11</text>'
+            f'<text x="{legend_text_x}" y="{legend_top + 52}" font-size="13" font-family="Arial">Marcatili exact Ex11</text>'
         )
 
     if marcatili_closed_form_points:
@@ -229,13 +416,13 @@ def main() -> None:
             y_pixel = map_value(y_value, FIG1_Y_MIN, FIG1_Y_MAX, plot_bottom, plot_top)
             polyline_points.append((x_pixel, y_pixel))
         svg_parts.append(
-            f'<polyline fill="none" stroke="#444444" stroke-width="2.0" stroke-dasharray="8 6" points="{build_polyline(polyline_points)}"/>'
+            f'<polyline fill="none" stroke="#d23b3b" stroke-width="2.2" stroke-dasharray="8 6" points="{build_polyline(polyline_points)}"/>'
         )
         svg_parts.append(
-            f'<line x1="{plot_right - 210}" y1="{plot_top + 74}" x2="{plot_right - 176}" y2="{plot_top + 74}" stroke="#444444" stroke-width="2.0" stroke-dasharray="8 6"/>'
+            f'<line x1="{legend_line_x1}" y1="{legend_top + 74}" x2="{legend_line_x2}" y2="{legend_top + 74}" stroke="#d23b3b" stroke-width="2.2" stroke-dasharray="8 6"/>'
         )
         svg_parts.append(
-            f'<text x="{plot_right - 162}" y="{plot_top + 78}" font-size="13" font-family="Arial">Marcatili closed-form Ex11</text>'
+            f'<text x="{legend_text_x}" y="{legend_top + 78}" font-size="13" font-family="Arial">Marcatili closed-form Ex11</text>'
         )
 
     if external_points:
@@ -246,23 +433,29 @@ def main() -> None:
                 f'<circle cx="{x_pixel:.2f}" cy="{y_pixel:.2f}" r="4.0" fill="#ffffff" stroke="#c23b22" stroke-width="1.8"/>'
             )
         svg_parts.append(
-            f'<circle cx="{plot_right - 193:.2f}" cy="{plot_top + 100:.2f}" r="4.0" fill="#ffffff" stroke="#c23b22" stroke-width="1.8"/>'
+            f'<circle cx="{plot_right - 193:.2f}" cy="{legend_top + 100:.2f}" r="4.0" fill="#ffffff" stroke="#c23b22" stroke-width="1.8"/>'
         )
         svg_parts.append(
-            f'<text x="{plot_right - 162}" y="{plot_top + 104}" font-size="13" font-family="Arial">Figura 1 (aproximado)</text>'
+            f'<text x="{legend_text_x}" y="{legend_top + 104}" font-size="13" font-family="Arial">Figura 1 (aproximado)</text>'
         )
 
-    footer_text = (
-        "FEM em azul; Marcatili exact em preto; Marcatili closed-form em preto tracejado; "
-        "círculos vazados mostram a digitalização visual aproximada da figura quando disponível."
-    )
+    footer_text = "FEM em azul; Marcatili exact em preto; Marcatili closed-form em vermelho tracejado."
+    if external_points:
+        footer_text += (
+            " Círculos vazados mostram a digitalização visual aproximada da figura "
+            "quando disponível."
+        )
     svg_parts.append(
         f'<text x="{plot_left}" y="{height - 46}" font-size="12" fill="#666" font-family="Arial">{footer_text}</text>'
     )
     svg_parts.append("</svg>")
 
-    (plots_dir / "fig1_like_reference.svg").write_text(
+    (plots_dir / args.output_name).write_text(
         "\n".join(svg_parts), encoding="utf-8"
+    )
+    generate_error_svg(
+        error_comparison_rows,
+        plots_dir / "fig1_error_vs_frequency.svg",
     )
 
 

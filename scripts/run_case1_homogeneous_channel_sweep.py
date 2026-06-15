@@ -107,6 +107,32 @@ def parse_args() -> argparse.Namespace:
             "the leading eigenpair."
         ),
     )
+    parser.add_argument(
+        "--normalized-frequency-values",
+        default=None,
+        help=(
+            "Comma-separated normalized-frequency values. Overrides the built-in "
+            "full/smoke grids when provided."
+        ),
+    )
+    parser.add_argument(
+        "--normalized-frequency-min",
+        type=float,
+        default=None,
+        help="Lower bound for a generated normalized-frequency grid.",
+    )
+    parser.add_argument(
+        "--normalized-frequency-max",
+        type=float,
+        default=None,
+        help="Upper bound for a generated normalized-frequency grid.",
+    )
+    parser.add_argument(
+        "--normalized-frequency-step",
+        type=float,
+        default=None,
+        help="Step for a generated normalized-frequency grid.",
+    )
     return parser.parse_args()
 
 
@@ -150,6 +176,57 @@ def load_yaml_like_case(case_path: Path) -> dict[str, str]:
 
 def format_value_label(value: float) -> str:
     return f"{value:.2f}".replace(".", "p")
+
+
+def parse_float_values(raw_values: str) -> list[float]:
+    values = [float(value.strip()) for value in raw_values.split(",") if value.strip()]
+    if not values:
+        raise ValueError("The custom normalized-frequency list cannot be empty")
+    return values
+
+
+def build_linear_values(value_min: float, value_max: float, step: float) -> list[float]:
+    if step <= 0.0:
+        raise ValueError("The generated normalized-frequency grid requires a positive step")
+    if value_max < value_min:
+        raise ValueError("The generated normalized-frequency grid requires max >= min")
+
+    values: list[float] = []
+    current = value_min
+    while current <= value_max + 1.0e-12:
+        values.append(round(current, 10))
+        current += step
+    return values
+
+
+def resolve_normalized_frequencies(args: argparse.Namespace) -> list[float]:
+    if args.normalized_frequency_values:
+        frequencies = parse_float_values(args.normalized_frequency_values)
+    elif (
+        args.normalized_frequency_min is not None
+        or args.normalized_frequency_max is not None
+        or args.normalized_frequency_step is not None
+    ):
+        frequencies = build_linear_values(
+            args.normalized_frequency_min
+            if args.normalized_frequency_min is not None
+            else FULL_NORMALIZED_FREQUENCIES[0],
+            args.normalized_frequency_max
+            if args.normalized_frequency_max is not None
+            else FULL_NORMALIZED_FREQUENCIES[-1],
+            args.normalized_frequency_step
+            if args.normalized_frequency_step is not None
+            else 0.2,
+        )
+    else:
+        frequencies = (
+            SMOKE_NORMALIZED_FREQUENCIES if args.smoke else FULL_NORMALIZED_FREQUENCIES
+        )
+
+    unique_frequencies = sorted(set(frequencies))
+    if any(value <= 0.0 for value in unique_frequencies):
+        raise ValueError("The sweep requires positive normalized frequencies")
+    return unique_frequencies
 
 
 def compute_k0(normalized_frequency: float, core_height: float, n2: float, n3: float) -> float:
@@ -275,9 +352,7 @@ def main() -> None:
     points_dir.mkdir(parents=True, exist_ok=True)
 
     template_entries = load_yaml_like_case(case_template)
-    frequencies = (
-        SMOKE_NORMALIZED_FREQUENCIES if args.smoke else FULL_NORMALIZED_FREQUENCIES
-    )
+    frequencies = resolve_normalized_frequencies(args)
     if args.requested_modes <= 0:
         raise ValueError("--requested-modes must be a positive integer")
     studies = SMOKE_STUDIES if args.smoke else FULL_STUDIES

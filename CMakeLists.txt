@@ -103,6 +103,30 @@ if(BUILD_TESTING)
             FIXTURES_SETUP waveguide_solver_case1_fixture
     )
 
+    add_test(NAME waveguide_solver_case3_smoke
+        COMMAND waveguide_solver
+            --case ${CMAKE_SOURCE_DIR}/cases/channel_diffused_isotropic_case.yaml
+            --output ${CMAKE_BINARY_DIR}/test_output/case3
+            --run-label ctest_case3
+    )
+
+    set_tests_properties(waveguide_solver_case3_smoke
+        PROPERTIES
+            FIXTURES_SETUP waveguide_solver_case3_fixture
+    )
+
+    add_test(NAME waveguide_solver_case4_smoke
+        COMMAND waveguide_solver
+            --case ${CMAKE_SOURCE_DIR}/cases/case4_gaussian_gaussian_channel.yaml
+            --output ${CMAKE_BINARY_DIR}/test_output/case4
+            --run-label ctest_case4
+    )
+
+    set_tests_properties(waveguide_solver_case4_smoke
+        PROPERTIES
+            FIXTURES_SETUP waveguide_solver_case4_fixture
+    )
+
     add_test(NAME waveguide_geometry_tests
         COMMAND waveguide_geometry_tests
     )
@@ -142,6 +166,28 @@ if(BUILD_TESTING)
     set_tests_properties(waveguide_solver_case1_smoke_artifacts
         PROPERTIES
             FIXTURES_REQUIRED waveguide_solver_case1_fixture
+    )
+
+    add_test(NAME waveguide_solver_case3_smoke_artifacts
+        COMMAND ${CMAKE_COMMAND}
+            -DSMOKE_OUTPUT_DIR=${CMAKE_BINARY_DIR}/test_output/case3
+            -P ${CMAKE_SOURCE_DIR}/tests/check_smoke_outputs.cmake
+    )
+
+    set_tests_properties(waveguide_solver_case3_smoke_artifacts
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_solver_case3_fixture
+    )
+
+    add_test(NAME waveguide_solver_case4_smoke_artifacts
+        COMMAND ${CMAKE_COMMAND}
+            -DSMOKE_OUTPUT_DIR=${CMAKE_BINARY_DIR}/test_output/case4
+            -P ${CMAKE_SOURCE_DIR}/tests/check_smoke_outputs.cmake
+    )
+
+    set_tests_properties(waveguide_solver_case4_smoke_artifacts
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_solver_case4_fixture
     )
 
     add_test(NAME waveguide_planar_sweep_smoke
@@ -236,5 +282,52 @@ if(BUILD_TESTING)
     set_tests_properties(waveguide_case1_sweep_artifacts
         PROPERTIES
             FIXTURES_REQUIRED waveguide_case1_sweep_plotted_fixture
+    )
+
+    add_test(NAME waveguide_case3_sweep_smoke
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/run_case3_channel_diffused_sweep.py
+            --smoke
+            --output-root ${CMAKE_BINARY_DIR}/test_output/case3_sweep
+    )
+
+    set_tests_properties(waveguide_case3_sweep_smoke
+        PROPERTIES
+            FIXTURES_SETUP waveguide_case3_sweep_fixture
+    )
+
+    add_test(NAME waveguide_case3_sweep_consolidate
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/consolidate_case3_channel_diffused_sweep.py
+            --sweep-root ${CMAKE_BINARY_DIR}/test_output/case3_sweep
+    )
+
+    set_tests_properties(waveguide_case3_sweep_consolidate
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_case3_sweep_fixture
+            FIXTURES_SETUP waveguide_case3_sweep_consolidated_fixture
+    )
+
+    add_test(NAME waveguide_case3_sweep_plot
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/plot_case3_channel_diffused_sweep.py
+            --sweep-root ${CMAKE_BINARY_DIR}/test_output/case3_sweep
+    )
+
+    set_tests_properties(waveguide_case3_sweep_plot
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_case3_sweep_consolidated_fixture
+            FIXTURES_SETUP waveguide_case3_sweep_plotted_fixture
+    )
+
+    add_test(NAME waveguide_case3_sweep_artifacts
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/check_case3_sweep_outputs.py
+            ${CMAKE_BINARY_DIR}/test_output/case3_sweep
+    )
+
+    set_tests_properties(waveguide_case3_sweep_artifacts
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_case3_sweep_plotted_fixture
     )
 endif()
