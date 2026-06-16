@@ -33,3 +33,11 @@ e para a extração da constante de propagação normalizada
 `B = (n_eff^2 - n2^2) / (n3^2 - n2^2)`.
 
 O sweep preliminar do Caso 1 é automatizado por `scripts/run_case1_homogeneous_channel_sweep.py`, com consolidação em `scripts/consolidate_case1_homogeneous_channel_sweep.py` e gráfico SVG em `scripts/plot_case1_homogeneous_channel_sweep.py`. Os pontos aproximados da Fig. 1 usados para comparação visual preliminar estão em [homogeneous_channel_fig1_reference_points.csv](homogeneous_channel_fig1_reference_points.csv).
+
+O arquivo [channel_diffused_isotropic_case.yaml](channel_diffused_isotropic_case.yaml) implementa o **Caso 3** como canal difuso isotrópico circular. Ele usa a malha de referência `channel_a2b_b1_reference.mesh`, perfil por partes de `docs/05` e serve de base para o sweep da Fig. 4.
+
+O arquivo [case4_gaussian_gaussian_channel.yaml](case4_gaussian_gaussian_channel.yaml) implementa o ponto de sanidade do **Caso 4**, com o perfil Gaussian-Gaussian recuperado da referência [12] e documentado em `docs/05`.
+
+O arquivo [case5_ape_linbo3.yaml](case5_ape_linbo3.yaml) implementa o ponto de sanidade do **Caso 5**. Ele usa a Eq. 10 de `docs/06` para relacionar concentração normalizada e índice extraordinário, mas ainda substitui o pré-processador de difusão anisotrópica por uma concentração proxy explícita. Portanto, este YAML é um teste de contrato material anisotrópico, não a reprodução final da Fig. 6.
+
+O arquivo [case6_ti_linbo3.yaml](case6_ti_linbo3.yaml) implementa o ponto de sanidade do **Caso 6**. Ele usa as Eqs. 11-12 de `docs/06` com parâmetros separados para os ramos extraordinário e ordinário. A reprodução final da Fig. 7 ainda exige sweep em `W` e extração dos tamanhos de modo `W_x` e `W_y`.

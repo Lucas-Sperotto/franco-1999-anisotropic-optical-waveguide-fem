@@ -60,7 +60,7 @@ Esse primeiro caso de canal difuso isotrópico é particularmente útil para est
 
 O perfil circular foi implementado em `src/material_profile.cpp` e testado via `cases/channel_diffused_isotropic_case.yaml` com a malha `channel_a2b_b1_reference.mesh` (304 nós, 540 elementos).
 
-**Auditoria T-005 — flags delta_x/delta_z:** `docs/02` §3 afirma explicitamente que F2, F3 e F4 são não-simétricas ("esparsas e não simétricas devido à presença de termos com $dn^2/d\zeta$") quando os flags estão ativos. O eigensolver Jacobi atual exige simetria e retorna 0 modos com F assimétrica. Os flags permanecem `false` com BLOCKER documentado em `src/material_profile.cpp` linhas 309–316. Próxima ação: eigensolver QZ/LAPACK (T-009).
+**Auditoria T-005 — flags delta_x/delta_z:** `docs/02` §3 afirma explicitamente que F2, F3 e F4 são não-simétricas ("esparsas e não simétricas devido à presença de termos com $dn^2/d\zeta$") quando os flags estão ativos. Os flags permanecem `false` nos perfis 2D até a rota não simétrica ser auditada para os sweeps finais.
 
 **Sweep de reprodução (15 pontos, V = 1.5..5.0):** executado com `scripts/run_case3_channel_diffused_sweep.py`. Com delta_x/delta_z desativados, o solver subestima os efeitos de gradiente, resultando em neff > n3av em todos os pontos e B > 1 (acima do limite da Fig. 4). A curva calculada é uma **aproximação inferior** do modelo completo: indica guiamento, mas superestima o confinamento.
 

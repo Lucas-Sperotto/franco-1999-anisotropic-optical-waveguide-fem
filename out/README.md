@@ -23,6 +23,8 @@ Convenção adotada nesta fase:
 
 O executável atual gera execuções demonstráveis para o caso homogêneo isotrópico constante, para o primeiro caso global com perfil planar difuso isotrópico e para o primeiro caso global de canal retangular homogêneo em degrau. Em todos eles, o fluxo cobre leitura de caso, leitura de malha, interpolação local dos coeficientes `nx2`, `nz2` e `gz2`, decomposição local dos termos `M`, `F1`, `F2`, `F3`, `F4` e `F`, montagem global densa, eliminação de Dirichlet em nós de fronteira e solução do autoproblema generalizado reduzido.
 
+Para os casos anisotrópicos APE e Ti:LiNbO3, o executável exporta também os campos nodais `nx` e `nz` em `results/nodal_material_fields.csv`, mantendo `refractive_index` como alias compatível para `nx`.
+
 Para o sweep do Caso 2, a pasta `out/planar_diffuse_sweep/<run_label>/` passa a conter:
 
 - `generated_cases/`: arquivos YAML temporários gerados para cada ponto do sweep;
@@ -47,18 +49,20 @@ As saídas finais atualmente reprodutíveis ficam nestas pastas fixas:
 - `out/planar_diffuse_sweep/final_run/`
 - `out/case3_channel_diffused_isotropic/final_run/`
 - `out/case4_gaussian_gaussian_channel/final_point/`
+- `out/case5_ape_linbo3/final_point/`
+- `out/case6_ti_linbo3/final_point/`
 
 Essas pastas são as fontes preferenciais para relatórios e conferência
 externa. Cada uma deve conter os manifests do sweep, os YAMLs gerados, os
 CSV consolidados em `consolidated/` e as figuras em `plots/`, quando se tratar
-de sweep. O Caso 4 ainda é apenas execução pontual de sanidade, portanto seus
-artefatos ficam diretamente em `results/`.
+de sweep. Os Casos 4, 5 e 6 ainda são execuções pontuais de sanidade, portanto
+seus artefatos ficam diretamente em `results/`.
 
 As demais pastas em `out/` são execuções exploratórias, auditorias pontuais,
 testes de hipótese ou entregas históricas. Elas não devem ser apagadas sem
 decisão explícita, porque podem estar referenciadas em relatórios anteriores,
 mas também não são necessárias para reproduzir o estado final dos Casos 1, 2,
-3 e o ponto de sanidade do Caso 4.
+3 e os pontos de sanidade dos Casos 4, 5 e 6.
 
 O fluxo orquestrado atual é:
 

@@ -207,24 +207,30 @@ Corresponde à subseção A de [06](06_guia_de_onda_de_canal_difuso_anisotropico
 
 **Entradas principais.**
 
-- material $LiNbO_3$;
-- índice inicial em degrau com $\Delta n_{\mathrm{PE}} = 0.12$;
-- relação entre concentração de prótons e índice extraordinário:
+**Tabela de Parâmetros (Caso 5)**
 
-$$
-n_e(C) = n_{es} + \Delta n_e \left[1 - \exp(-11C)\right];
-$$
+| Parâmetro | Símbolo | Valor | Unidade | Fonte |
+|---|---|---|---|---|
+| **Material e Geometria** | | | | |
+| Material do substrato | - | $LiNbO_3$ | - | [06] |
+| Corte do cristal | - | x-cut | - | [06] |
+| Comprimento de onda | $\lambda_0$ | 0.6328 | $\mu$m | [06] |
+| **Processo de Fabricação** | | | | |
+| Processo | - | APE | - | [06] |
+| Tempo de troca protônica (PE) | $t_{PE}$ | 15 | min | [06] |
+| Temperatura de PE | $T_{PE}$ | 190 | $^\circ$C | [06] |
+| Tempo de recozimento | $t_{anneal}$ | 4 | h | [06] |
+| Temperatura de recozimento | $T_{anneal}$ | 360 | $^\circ$C | [06] |
+| **Modelo de Índice** | | | | |
+| Variação inicial do índice (PE) | $\Delta n_{\mathrm{PE}}$ | 0.12 | - | [06] |
+| Constante de difusão (recozimento, x-cut) | $D_a(x\text{-cut})$ | 0.92 | $\mu\text{m}^2/\text{h}$ | [06] |
+| Constante de difusão (recozimento, z-cut) | $D_a(z\text{-cut})$ | 0.77 | $\mu\text{m}^2/\text{h}$ | [06] |
+| Relação índice-concentração | $n_e(C)$ | $n_{es} + \Delta n_e \left[1 - \exp(-11C)\right]$ | - | [06], Eq. 10 |
+| **Lacunas** | | | | |
+| Índice extraordinário do substrato | $n_{es}$ | Não informado | - | - |
+| Variação máxima do índice | $\Delta n_e$ | Não informado (provavelmente $\Delta n_{\mathrm{PE}}$) | - | - |
 
-- condições do processo: quinze minutos de PE a $190^\circ$C e quatro horas de recozimento a $360^\circ$C;
-- parâmetros
-
-$$
-D_a(x\text{-cut}) = 0.92\ \mu\text{m}^2/\text{h}, \qquad D_a(z\text{-cut}) = 0.77\ \mu\text{m}^2/\text{h},
-$$
-
-$$
-\lambda_0 = 0.6328\ \mu\text{m}.
-$$
+O perfil de concentração $C(x,y)$ é obtido pela solução de uma equação de difusão anisotrópica 2D, que é um passo de pré-processamento [06].
 
 **Saídas esperadas.**
 
@@ -244,13 +250,13 @@ Corresponde à subseção B de [06](06_guia_de_onda_de_canal_difuso_anisotropico
 
 **Entradas principais.**
 
-- expressão do índice difundido:
+O perfil de índice $n_{e,o}^2(x,y,\lambda)$ é dado por:
 
 $$
 n_{e,o}^2(x,y,\lambda) = n_{b_{e,o}}^2 + \left[ \left(n_{b_{e,o}} + \Delta n_{s_{e,o}}\right)^2 - n_{b_{e,o}}^2 \right] \exp\left(-\frac{y^2}{d_y^2}\right) f\left(\frac{2x}{W}\right);
 $$
 
-- função auxiliar:
+com a função auxiliar $f(2x/W)$:
 
 $$
 f\left(\frac{2x}{W}\right) = \frac{1}{2} \left\{
@@ -258,25 +264,49 @@ f\left(\frac{2x}{W}\right) = \frac{1}{2} \left\{
 + \operatorname{erf} \left[ \frac{W}{2d_x} \left( 1 - \frac{2x}{W} \right) \right] \right\};
 $$
 
-- modelo para $\Delta n_{s_{e,o}}(\lambda)$:
+**Tabela de Parâmetros de Processo (Caso 6)**
+
+| Parâmetro | Símbolo | Valor | Unidade | Fonte |
+|---|---|---|---|---|
+| Material do substrato | - | Ti:$LiNbO_3$ | - | [06] |
+| Corte do cristal | - | x-cut | - | [06] |
+| Comprimento de onda | $\lambda$ | 1.523 | $\mu$m | [06] |
+| Espessura inicial da faixa de Ti | $H$ | 100 | nm | [06] |
+| Temperatura de difusão | $T$ | 1050 | $^\circ$C | [06] |
+| Tempo de difusão | $t$ | 8.5 | h | [06] |
+| Variável de varredura | $W$ | (varredura) | $\mu$m | [06], Fig. 7 |
+
+**Tabela de Parâmetros de Material Derivados (Caso 6)**
+
+| Parâmetro | Símbolo | Valor | Unidade | Fonte |
+|---|---|---|---|---|
+| **Ramo Extraordinário (e)** | | | | |
+| Profundidade de difusão lateral | $d_{xe}$ | 4.60 | $\mu$m | [06] |
+| Profundidade de difusão | $d_{ye}$ | 4.00 | $\mu$m | [06] |
+| Índice do substrato | $n_{be}$ | 2.2125 | - | [06] |
+| Variação do índice superficial | $\Delta n_{se}$ | 0.00446 | - | [06] |
+| **Ramo Ordinário (o)** | | | | |
+| Profundidade de difusão lateral | $d_{xo}$ | 6.23 | $\mu$m | [06] |
+| Profundidade de difusão | $d_{yo}$ | 4.98 | $\mu$m | [06] |
+| Índice do substrato | $n_{bo}$ | 2.1383 | - | [06] |
+| Variação do índice superficial | $\Delta n_{so}$ | 0.01217 | - | [06] |
+
+Os valores de $\Delta n_{s_{e,o}}$ são obtidos a partir do modelo:
 
 $$
 \Delta n_{s_{e,o}}(\lambda) = \left[ B_0(\lambda) + B_1(\lambda)\frac{H}{d_{y_{e,o}}} \right] \left( \frac{H}{d_{y_{e,o}}} \right)^{\alpha_{e,o}};
 $$
 
-- parâmetros:
+**Modelo de Variação de Índice Superficial $\Delta n_{s_{e,o}}(\lambda)$ (Caso 6)**
 
-$$
-H = 100\ \text{nm}, \qquad \lambda = 1.523\ \mu\text{m}, \qquad T = 1050^\circ\text{C}, \qquad t = 8.5\ \text{h};
-$$
-
-$$
-d_{xe} = 4.60\ \mu\text{m}, \quad d_{ye} = 4.00\ \mu\text{m}, \quad d_{xo} = 6.23\ \mu\text{m}, \quad d_{yo} = 4.98\ \mu\text{m};
-$$
-
-$$
-n_{be} = 2.2125, \quad n_{bo} = 2.1383, \quad \Delta n_{se} = 0.00446, \quad \Delta n_{so} = 0.01217.
-$$
+| Parâmetro | Símbolo | Valor | Fonte |
+|---|---|---|---|
+| Expoente (extraordinário) | $\alpha_e$ | 0.83 | [06] |
+| Expoente (ordinário) | $\alpha_o$ | 0.53 | [06] |
+| Coeficientes $B_0$ (extraordinário) | $B_{0_e}(\lambda)$ | $0.385 - 0.430\lambda + 0.171\lambda^2$ | [06] |
+| Coeficientes $B_1$ (extraordinário) | $B_{1_e}(\lambda)$ | $9.130 + 3.850\lambda - 2.490\lambda^2$ | [06] |
+| Coeficientes $B_0$ (ordinário) | $B_{0_o}(\lambda)$ | $0.0653 - 0.0315\lambda + 0.0071\lambda^2$ | [06] |
+| Coeficientes $B_1$ (ordinário) | $B_{1_o}(\lambda)$ | $0.4780 + 0.4640\lambda - 0.3480\lambda^2$ | [06] |
 
 **Saídas esperadas.**
 
@@ -318,9 +348,11 @@ $$
 
 - o termo $[F_4]$ da formulação em [02](02_formulacao_por_elementos_finitos.md), por ser uma região sensível a ambiguidades tipográficas em documentos escaneados;
 - a validação por sweep e figura do Caso 4, agora que a definição explícita de $f(x,y)$ foi recuperada da referência [12];
+- a substituição temporária do pré-processador de concentração APE por uma concentração proxy explícita no Caso 5;
+- a extração dos tamanhos de modo $W_x$ e $W_y$ para o sweep final do Caso 6;
 - a parametrização geométrica associada à dimensão $b$ no Caso 1, que depende da leitura da figura original.
 
-## Estado atual de reprodução (2026-06-15)
+## Estado atual de reprodução (2026-06-16)
 
 Esta seção registra o estado real de implementação e validação de cada caso no repositório, distinto do planejamento das seções anteriores.
 
@@ -328,19 +360,21 @@ Esta seção registra o estado real de implementação e validação de cada cas
 | --- | --- | --- | --- |
 | 1 — canal homogêneo isotrópico | Fig. 1 | PARCIAL | **T-004 concluído (2026-06-15):** guia de superfície assimétrico confirmado (n₁=1.00 ar acima, n₂=1.43 substrato abaixo/laterais). YAML `cover_index=1.00` correto sem alteração. Sweep smoke: B=0.502/0.735/0.910 em V=1.2/2.0/4.0. Discrepância em V=1.2 explicada: pontos de referência extraídos da curva Marcatili/EIM (curvas inferiores na Fig. 1), não da curva FEM "This work" do artigo. |
 | 2 — planar difuso isotrópico | Fig. 2 | COMPLETO | CSV, SVG e comparação analítica (erro máximo 0,0017%). Regressão ativa no CTest. |
-| 3 — canal circular difuso isotrópico | Fig. 4 | PARCIAL | Solver executa pontualmente, gera CSV. Sem sweep completo nem figura. **T-005 concluído:** flags `delta_x`/`delta_z` permanecem `false` — BLOCKER documentado em `src/material_profile.cpp`: F não-simétrica não suportada pelo eigensolver Jacobi atual; aguarda QZ/LAPACK (T-009). |
+| 3 — canal circular difuso isotrópico | Fig. 4 | PARCIAL | Sweep, CSV e SVG existem. **T-005 concluído:** flags `delta_x`/`delta_z` permanecem `false` — a ativação dos termos de gradiente ainda precisa ser auditada na rota não simétrica antes da validação final. |
 | 4 — canal Gaussian-Gaussian | Fig. 5 | PARCIAL | **T-007/T-008 concluídos:** `f(x,y)=exp[-4(x-x0)^2/a^2]·exp[-(y/b)^2]` verificada na referência [12], perfil C++ e YAML pontual implementados. Falta sweep/consolidação/figura; `delta_x/delta_z` seguem bloqueados por T-005. |
-| 5 — APE LiNbO₃ | Fig. 6 | FALTANDO | Perfil anisotrópico não implementado. Depende de T-009, T-010, T-011. |
-| 6 — Ti:LiNbO₃ | Fig. 7 | FALTANDO | Perfil anisotrópico não implementado. Todos os parâmetros numéricos estão em `docs/06`. Depende de T-009, T-010, T-012. |
+| 5 — APE LiNbO₃ | Fig. 6 | PARCIAL | **T-011 concluído (2026-06-16):** perfil anisotrópico de sanidade `ape_linbo3_anisotropic_sanity`, YAML `cases/case5_ape_linbo3.yaml`, CTest smoke e CSV pontual existem. Limitação: `C(x,y)` usa concentração proxy; falta pré-processador de difusão APE e sweep dos 4 modos. |
+| 6 — Ti:LiNbO₃ | Fig. 7 | PARCIAL | **T-012 concluído (2026-06-16):** perfil `ti_diffused_linbo3_anisotropic` implementa Eqs. 11-12 com parâmetros ordinário/extraordinário separados, YAML `cases/case6_ti_linbo3.yaml`, CTest smoke e CSV pontual existem. Falta sweep em `W`, extração de `W_x/W_y` e figura. |
 
-**Resumo:** 1 caso completo (Caso 2), 2 parciais (Casos 1 e 3), 3 faltando (Casos 4-6).
+**Resumo:** 1 caso completo (Caso 2), 5 parciais (Casos 1, 3, 4, 5 e 6), 0 faltando na camada de execução pontual.
 
 **Próximas ações:**
 
 - Caso 1: executar sweep completo com a malha de referência (`channel_a2b_b1_reference.mesh`) para regenerar artefatos finais (T-013).
 - Caso 2: fixar artefatos finais em `out/planar_diffuse_sweep/final_run/` (T-014).
-- Caso 3: implementar eigensolver não-simétrico (QZ/LAPACK, T-009) para ativar termos de gradiente; criar pipeline de sweep e plot (T-006).
+- Caso 3: auditar a rota não simétrica para ativar termos de gradiente.
 - Caso 4: criar sweep, consolidação e figura da Fig. 5 a partir do perfil Gaussian-Gaussian já implementado.
+- Caso 5: implementar ou importar o pré-processador de concentração APE para substituir a concentração proxy.
+- Caso 6: criar sweep em largura `W`, calcular `W_x/W_y` e gerar a Fig. 7.
 
 ---
 

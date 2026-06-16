@@ -209,7 +209,7 @@ python3 scripts/plot_case3_channel_diffused_sweep.py \
 **Status: PARTIAL**
 
 **Limitações conhecidas (T-005 concluído):**
-1. `delta_x = false` e `delta_z = false` em `src/material_profile.cpp` — os termos de gradiente F2-gradiente e F4 não são computados. Isso é um BLOCKER documentado: ativar esses flags torna F não-simétrica (conforme docs/02 §3b), e o eigensolver Jacobi retorna 0 modos. Flags permanecem desativados até implementação de eigensolver QZ/LAPACK (T-009).
+1. `delta_x = false` e `delta_z = false` em `src/material_profile.cpp` — os termos de gradiente F2-gradiente e F4 não são computados. Isso é um BLOCKER documentado: ativar esses flags torna F não-simétrica (conforme docs/02 §3b). A rota não simétrica atual ainda precisa ser auditada para os sweeps finais antes de reativar os termos de gradiente.
 2. Com delta_x/delta_z desativados, neff > n3av em todos os pontos, resultando em B > 1. A curva do artigo (Fig. 4) mostra B < 1, indicando que os termos de gradiente são necessários para confinamento correto. A curva atual é uma aproximação inferior do modelo completo.
 3. O SVG inclui nota de limitação T-005 visível e eixo B estendido até 1.5.
 
@@ -241,17 +241,41 @@ bash scripts/run_case.sh cases/case4_gaussian_gaussian_channel.yaml audit_case4
 
 ### 4.5 Fig. 6 — APE LiNbO3
 
-**Status: MISSING**
+**Status: PARTIAL**
 
-O perfil APE envolve difusão anisotrópica 2D cuja concentração C(x,y) varia segundo uma equação de difusão anisotrópica resolvida em pré-processamento. A equação de índice em função de C está documentada em `docs/06` (Eq. 10). Nenhum perfil de material, YAML, script ou dado existe para este caso.
+O perfil APE envolve difusão anisotrópica 2D cuja concentração C(x,y) varia segundo uma equação de difusão anisotrópica resolvida em pré-processamento. A equação de índice em função de C está documentada em `docs/06` (Eq. 10).
+
+Foi implementado um ponto de sanidade anisotrópico:
+
+```bash
+bash scripts/run_case.sh cases/case5_ape_linbo3.yaml audit_case5
+```
+
+**CSV gerado:** `out/case5_ape_linbo3/audit_case5/results/neff.csv`
+
+**Resultado pontual:** quatro modos exportados; modo líder com `n_eff = 2.207327`.
+
+**Limitação:** a concentração C(x,y) ainda não é produzida por um pré-processador FEM de difusão anisotrópica. O YAML usa uma concentração proxy Gaussian-Gaussian explícita apenas para exercitar o contrato material, a montagem e a exportação. Portanto, este ponto não deve ser interpretado como reprodução final da Fig. 6.
 
 ---
 
 ### 4.6 Fig. 7 — Ti:LiNbO3
 
-**Status: MISSING**
+**Status: PARTIAL**
 
-O perfil Ti:LiNbO3 envolve perfis Gaussian-Gaussian anisotrópicos com parâmetros distintos para os ramos extraordinário e ordinário (Eqs. 11–13, documentadas em `docs/06`). Todos os parâmetros numéricos necessários estão em `docs/06`, mas nenhum perfil de material, YAML, script ou dado existe para este caso.
+O perfil Ti:LiNbO3 envolve perfis anisotrópicos com parâmetros distintos para os ramos extraordinário e ordinário (Eqs. 11–13, documentadas em `docs/06`).
+
+Foi implementado um ponto de sanidade com `W = 7.0 um`:
+
+```bash
+bash scripts/run_case.sh cases/case6_ti_linbo3.yaml audit_case6
+```
+
+**CSV gerado:** `out/case6_ti_linbo3/audit_case6/results/neff.csv`
+
+**Resultado pontual:** modo líder com `n_eff = 2.210077`.
+
+**Limitação:** a implementação atual executa apenas um ponto, separando os ramos extraordinário (`n_x`) e ordinário (`n_z`) no CSV nodal. Ainda faltam sweep em `W`, extração dos tamanhos de modo `W_x` e `W_y` e figura comparável à Fig. 7.
 
 ---
 
@@ -261,10 +285,10 @@ O perfil Ti:LiNbO3 envolve perfis Gaussian-Gaussian anisotrópicos com parâmetr
 |---|---|---|---|---|---|---|
 | Fig. 1 | Canal homogêneo | Sim (34 pts) | Sim (SVG) | 4 testes sweep | **PARTIAL** | T-004: geometria surface assimétrica confirmada; B=0.571 em V=1.2 vs referência 0.350 (Marcatili/EIM); B=0.910 em V=4.0 (~0% erro) |
 | Fig. 2 | Planar difuso | Sim | Sim (SVG) | 4 testes sweep | **PASS** | Erro máx. 0.0017% vs. solução exata. Artefatos em `final_run/` |
-| Fig. 4 | Canal circular | Sim (15 pts) | Sim (SVG) | smoke + global_tests | **PARTIAL** | T-005: flags delta_x/delta_z bloqueados (F não-simétrica); B > 1 em todos os pontos; curva é aproximação inferior. Eigensolver QZ/LAPACK pendente (T-009) |
+| Fig. 4 | Canal circular | Sim (15 pts) | Sim (SVG) | smoke + global_tests | **PARTIAL** | T-005: flags delta_x/delta_z bloqueados (F não-simétrica); B > 1 em todos os pontos; curva é aproximação com gradientes omitidos. Falta auditar a rota não simétrica para os sweeps finais |
 | Fig. 5 | Gaussian-Gaussian | Sim (ponto) | Não | smoke + global_tests | **PARTIAL** | T-007/T-008: fórmula verificada na ref. [12], perfil C++ e YAML pontual implementados; falta sweep/figura e eigensolver não simétrico para delta_x/delta_z |
-| Fig. 6 | APE LiNbO3 | Não | Não | Não | **MISSING** | Perfil anisotrópico não implementado. Aguarda T-009, T-010, T-011 |
-| Fig. 7 | Ti:LiNbO3 | Não | Não | Não | **MISSING** | Parâmetros numéricos completos em docs/06. Aguarda T-009, T-010, T-012 |
+| Fig. 6 | APE LiNbO3 | Sim (ponto) | Não | smoke + global_tests | **PARTIAL** | T-011: perfil APE de sanidade, YAML e CSV pontual implementados; falta concentração FEM de difusão e sweep/figura |
+| Fig. 7 | Ti:LiNbO3 | Sim (ponto) | Não | smoke + global_tests | **PARTIAL** | T-012: perfil Ti com ramos ordinário/extraordinário separados e CSV pontual; falta sweep em W, W_x/W_y e figura |
 
 ---
 
@@ -274,7 +298,7 @@ O perfil Ti:LiNbO3 envolve perfis Gaussian-Gaussian anisotrópicos com parâmetr
 # 1. Compilar
 ./scripts/build.sh
 
-# 2. Executar suíte completa de testes (19 testes)
+# 2. Executar suíte completa de testes (29 testes)
 ./scripts/test.sh
 # Equivalente: /usr/bin/ctest --test-dir build --output-on-failure
 
@@ -296,6 +320,10 @@ python3 scripts/plot_case1_homogeneous_channel_sweep.py \
 
 # 5. Executar Caso 3 (ponto único — sem validação)
 scripts/run_case.sh cases/channel_diffused_isotropic_case.yaml audit_case3
+
+# 6. Executar pontos de sanidade anisotrópicos
+bash scripts/run_case.sh cases/case5_ape_linbo3.yaml audit_case5
+bash scripts/run_case.sh cases/case6_ti_linbo3.yaml audit_case6
 ```
 
 > Nota: o comando `ctest` no PATH em `~/.local/bin/ctest` é um wrapper Python com dependência ausente e falha antes de executar a suíte. Use `/usr/bin/ctest` ou `./scripts/test.sh`.
@@ -318,11 +346,13 @@ Os três pontos de comparação do Caso 1 são gerados com a malha smoke (`chann
 
 ### 7.4 Caso 3 — termos de gradiente não ativados (bloqueador: eigensolver simétrico)
 
-A implementação atual do perfil circular usa `delta_x = false; delta_z = false` (T-005, 2026-05-14). Fisicamente, o perfil circular n(x,y) varia em ambas as direções e deveria usar ambos os flags ativos. No entanto, a ativação torna F não-simétrica (conforme docs/02 §3b), e o eigensolver Jacobi atual só funciona com sistemas simétricos — retorna 0 modos quando F é assimétrica. O bloqueador é a ausência de um eigensolver não-simétrico (QZ/LAPACK). O impacto sobre `neff` dos termos omitidos não foi estimado.
+A implementação atual do perfil circular usa `delta_x = false; delta_z = false` (T-005). Fisicamente, o perfil circular n(x,y) varia em ambas as direções e deveria usar ambos os flags ativos. No entanto, a ativação torna F não-simétrica (conforme docs/02 §3b), e a rota não simétrica atual ainda não foi auditada para os sweeps finais desses perfis. O impacto sobre `neff` dos termos omitidos não foi estimado.
 
 ### 7.5 Casos 5 e 6 — difusão anisotrópica
 
-Os guias APE e Ti:LiNbO3 exigem um mapa de concentração de prótons/titânio C(x,y) obtido por solução separada de uma equação de difusão anisotrópica. Isso não está implementado. A alternativa de usar o perfil de índice diretamente (sem simular a difusão) pode ser suficiente para reproduzir as curvas do artigo se os perfis finais forem usados como entrada.
+O Caso 5 ainda exige um mapa de concentração de prótons C(x,y) obtido por solução separada de uma equação de difusão anisotrópica. O ponto atual usa uma concentração proxy explícita, documentada no YAML e no `material_profile_summary.txt`, apenas como sanidade.
+
+O Caso 6 já usa diretamente o perfil de índice das Eqs. 11-12 para os ramos extraordinário e ordinário, mas ainda não varre a largura inicial da faixa de Ti nem calcula os tamanhos de modo `W_x` e `W_y`.
 
 ---
 
@@ -332,9 +362,12 @@ Os guias APE e Ti:LiNbO3 exigem um mapa de concentração de prótons/titânio C
 
 **Parcialmente reproduzido:**
 - Caso 1 (guia homogêneo): executa e gera curva, mas a geometria precisa ser confirmada antes de qualquer conclusão sobre fidelidade à Fig. 1.
-- Caso 3 (canal circular): o perfil material está implementado e o solver gera `neff` para um ponto pontual. Faltam sweep, curva de dispersão e auditoria do termo F4.
+- Caso 3 (canal circular): sweep e figura existem, mas os termos de gradiente seguem desativados até auditoria da rota não simétrica.
+- Caso 4 (Gaussian-Gaussian): perfil e ponto de sanidade implementados; falta sweep/figura.
+- Caso 5 (APE LiNbO3): perfil de sanidade implementado; falta pré-processador de concentração e sweep/figura.
+- Caso 6 (Ti:LiNbO3): perfil anisotrópico implementado para um ponto; falta sweep em `W`, `W_x/W_y` e figura.
 
-**Trabalho futuro:** o Caso 4 já tem perfil e execução pontual, mas ainda precisa de sweep e figura para a Fig. 5. Os Casos 5 e 6 dependem de implementação de perfis materiais anisotrópicos com parâmetros documentados em `docs/06`.
+**Trabalho futuro:** fechar a reprodução final exige sweeps/figuras dos Casos 4, 5 e 6, além da auditoria dos termos de gradiente nos perfis 2D.
 
 ---
 
@@ -344,6 +377,6 @@ Ver `TODO.md` para a lista completa. Estado das tarefas imediatas (2026-05-14):
 
 1. **T-004** — CONCLUÍDO: hipótese buried testada e rejeitada; `cover_index = 1.00` mantido.
 2. **T-005** — CONCLUÍDO: bloqueador identificado (eigensolver não-simétrico); flags mantidos desativados com BLOCKER comment.
-3. **T-006** — PENDENTE (Codex): criar script de sweep para o Caso 3 (Fig. 4).
-4. **Caso 4** — PENDENTE: criar sweep, consolidação e figura da Fig. 5 a partir do perfil Gaussian-Gaussian implementado.
-5. **T-009** — PENDENTE (Codex): criar teste unitário de material anisotrópico antes dos Casos 5 e 6.
+3. **Caso 4** — PENDENTE: criar sweep, consolidação e figura da Fig. 5 a partir do perfil Gaussian-Gaussian implementado.
+4. **Caso 5** — PENDENTE: substituir concentração proxy por pré-processador de difusão APE e gerar a Fig. 6.
+5. **Caso 6** — PENDENTE: criar sweep em `W`, extrair `W_x/W_y` e gerar a Fig. 7.

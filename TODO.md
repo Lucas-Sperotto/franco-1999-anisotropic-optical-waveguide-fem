@@ -8,7 +8,7 @@
 
 O projeto está **parcialmente pronto**.
 
-A base técnica compila, a suíte passa quando o binário correto do CTest é usado (`/usr/bin/ctest`), e os Casos 1 e 2 já têm pipelines que geram CSV e figura. O Caso 2 é o único caso atualmente pronto como reprodução final: tem CSV, figura e comparação analítica no pipeline. O Caso 1 é reprodutível, mas ainda não validado numericamente contra a Fig. 1 por causa da pendência de geometria/documentação. O Caso 3 já executa como modelo pontual e gera CSV, mas não tem sweep, figura nem CTest de artefatos. Os Casos 4, 5 e 6 ainda não estão implementados como reprodução.
+A base técnica compila, a suíte passa via `./scripts/test.sh`, e os Casos 1, 2 e 3 já têm pipelines que geram CSV e figura. O Caso 2 é o único caso atualmente pronto como reprodução quantitativa final: tem CSV, figura e comparação analítica no pipeline. O Caso 1 é reprodutível, mas permanece parcial pela comparação visual com curvas Marcatili/EIM. O Caso 3 gera sweep/figura, mas ainda mantém os termos de gradiente desativados. Os Casos 4, 5 e 6 agora têm perfis/YAMLs e execuções pontuais de sanidade, mas ainda não têm sweeps/figuras finais.
 
 Casos já prontos:
 
@@ -17,13 +17,10 @@ Casos já prontos:
 Casos implementados ou reprodutíveis, mas ainda não prontos:
 
 - Caso 1 - Fig. 1: CSV e figura existem, mas a validação final depende de resolver a geometria `cover_index`/`substrate_index`.
-- Caso 3 - Fig. 4: solver e YAML existem; execução pontual gera CSV; faltam sweep, figura, CTest dedicado e auditoria do TODO `delta_x`/`delta_z`.
+- Caso 3 - Fig. 4: sweep e figura existem, mas a validação final depende de auditar/ativar `delta_x`/`delta_z`.
 - Caso 4 - Fig. 5: perfil Gaussian-Gaussian, YAML e execução pontual existem; faltam sweep, consolidação e figura.
-
-Casos faltantes:
-
-- Caso 5 - Fig. 6: APE em LiNbO3 ainda não implementado.
-- Caso 6 - Fig. 7: Ti:LiNbO3 ainda não implementado.
+- Caso 5 - Fig. 6: perfil APE LiNbO3, YAML e execução pontual existem; falta pré-processador de concentração e sweep/figura.
+- Caso 6 - Fig. 7: perfil Ti:LiNbO3, YAML e execução pontual existem; falta sweep em `W`, extração de tamanhos de modo e figura.
 
 ## 2. Matriz de reprodução
 
@@ -31,10 +28,10 @@ Casos faltantes:
 | --- | --- | --- | --- | --- |
 | Caso 1 - guia homogêneo isotrópico | Fig. 1 | Parcial: geometria confirmada (T-004), docs/03 atualizado (T-017); discrepância explicada por ref. de Marcatili/EIM | Regenerar artefatos finais em `final_run/` (T-013) | Claude/Gemini |
 | Caso 2 - guia planar isotrópico difundido | Fig. 2 | Pronto: executa, gera CSV e SVG, possui comparação analítica | Fixar artefatos finais em `final_run/` (T-014) | Gemini |
-| Caso 3 - canal isotrópico circular | Fig. 4 | Parcial: modelo, YAML e CSV pontual existem; flags delta bloqueados (T-005 concluído); sem sweep nem figura | Criar scripts sweep/plot (T-006), aguardar eigensolver QZ/LAPACK (T-009) | Codex + Claude |
+| Caso 3 - canal isotrópico circular | Fig. 4 | Parcial: modelo, YAML, sweep, CSV e figura existem; flags delta bloqueados (T-005 concluído) | Auditar rota não-simétrica antes de ativar `delta_x/delta_z` | Codex + Claude |
 | Caso 4 - canal Gaussian-Gaussian | Fig. 5 | Parcial: fórmula confirmada na ref. [12], perfil C++ e YAML pontual implementados (T-008) | Criar sweep/consolidação/plot da Fig. 5; manter ressalva T-005 dos termos de gradiente | Codex |
-| Caso 5 - APE LiNbO3 | Fig. 6 | Faltando | Preparar contrato anisotrópico (T-009), parâmetros (T-010), implementar perfil APE, YAML, sweep, CSV e figura (T-011) | Gemini + Codex |
-| Caso 6 - Ti:LiNbO3 | Fig. 7 | Faltando | Parâmetros em docs/06; preparar perfil Ti, YAML, sweep, CSV e figura (T-012) | Gemini + Codex |
+| Caso 5 - APE LiNbO3 | Fig. 6 | Parcial: perfil anisotrópico de sanidade, YAML e CSV pontual implementados (T-011) | Implementar pré-processador de concentração APE, sweep dos 4 modos e figura | Codex |
+| Caso 6 - Ti:LiNbO3 | Fig. 7 | Parcial: perfil Ti anisotrópico, YAML e CSV pontual implementados (T-012) | Criar sweep em largura `W`, extrair `W_x/W_y` e gerar figura | Codex |
 
 ## 3. TODO por fases
 
@@ -55,7 +52,7 @@ Casos faltantes:
 - [x] T-003 — Atualizar documentação curta da suíte de testes
   - Responsável: Codex
   - Arquivos: `tests/README.md`, `README.md`
-  - Critério de aceite: a documentação informa 19 testes atuais, os testes smoke do Caso 3 e o uso de `/usr/bin/ctest` ou `./scripts/test.sh`.
+  - Critério de aceite: a documentação informa a suíte CTest atual, os testes smoke dos casos implementados e o uso de `/usr/bin/ctest` ou `./scripts/test.sh`.
   - Comando de teste: `./scripts/test.sh`
 
 ### Fase B - Fechamento dos casos numéricos
@@ -72,7 +69,7 @@ Casos faltantes:
   - Arquivos: `docs/02_formulacao_por_elementos_finitos.md`, `docs/05_guia_de_onda_de_canal_difuso_isotropico.md`, `src/material_profile.cpp`, `src/local_assembly.cpp`
   - Critério de aceite: a decisão sobre `delta_x` e `delta_z` no perfil circular fica registrada com justificativa; se a documentação não sustentar mudança, manter o caso conservador e registrar TODO explícito.
   - Comando de teste: verificação documental e `build/waveguide_global_tests`
-  - **Resultado (2026-06-15):** `docs/02` §3 confirma explicitamente que F2, F3 e F4 são não-simétricas quando delta_x/delta_z são ativos ("esparsas e não simétricas devido à presença de termos com dn²/dζ"). O eigensolver Jacobi atual exige simetria e retorna 0 modos com F assimétrica. Flags permanecem `false` com BLOCKER documentado em `src/material_profile.cpp` (linhas 309–316). Próxima ação: implementar eigensolver QZ/LAPACK (Codex, T-009).
+  - **Resultado (2026-06-15):** `docs/02` §3 confirma explicitamente que F2, F3 e F4 são não-simétricas quando delta_x/delta_z são ativos ("esparsas e não simétricas devido à presença de termos com dn²/dζ"). Os flags permanecem `false` nos perfis 2D até a rota não simétrica atual ser auditada para os sweeps finais. O bloqueio matemático segue registrado em `src/material_profile.cpp`.
 
 - [x] T-006 — Criar pipeline completo da Fig. 4
   - Responsável: Codex
@@ -101,23 +98,26 @@ Casos faltantes:
   - Comando de teste: `cmake --build build -j && build/waveguide_global_tests`
   - **Resultado Codex (2026-06-15):** `tests/global_tests.cpp` agora monta um caso anisotrópico constante com `nx2 != nz2`, verifica que `M_full` e `F_full` diferem do caso isotrópico equivalente, preserva simetria no caso constante e resolve um autovalor válido. Validação: `./scripts/test.sh -R waveguide_global_tests`.
 
-- [ ] T-010 — Consolidar tabela de parâmetros dos Casos 5 e 6
+- [x] T-010 — Consolidar tabela de parâmetros dos Casos 5 e 6
   - Responsável: Gemini
   - Arquivos: `docs/06_guia_de_onda_de_canal_difuso_anisotropico.md`, `docs/09_resumo_dos_casos_de_teste.md`, `ai_logs/`
   - Critério de aceite: todos os parâmetros necessários para APE e Ti:LiNbO3 estão listados, com unidade, símbolo, fonte e lacunas explícitas.
   - Comando de teste: verificação manual das tabelas
+  - **Resultado (2026-06-15):** Tabelas de parâmetros detalhadas para os Casos 5 e 6 foram adicionadas a `docs/09_resumo_dos_casos_de_teste.md`, consolidando as informações de `docs/06` e explicitando as lacunas (e.g., $n_{es}$ no Caso 5).
 
-- [ ] T-011 — Implementar o Caso 5, APE LiNbO3
+- [x] T-011 — Implementar o Caso 5, APE LiNbO3
   - Responsável: Codex
   - Arquivos: `src/material_profile.cpp`, `src/config.cpp`, `src/global_assembly.cpp`, `src/app.cpp`, `cases/case5_ape_linbo3.yaml`, `tests/global_tests.cpp`
   - Critério de aceite: o solver executa pelo menos um ponto da Fig. 6, gera CSV e deixa limitações da difusão anisotrópica documentadas.
   - Comando de teste: `bash scripts/run_case.sh cases/case5_ape_linbo3.yaml audit_case5`
+  - **Resultado Codex (2026-06-16):** implementado `ape_linbo3_anisotropic_sanity` com Eq. 10 de `docs/06` e concentração proxy Gaussian-Gaussian explícita. O YAML `cases/case5_ape_linbo3.yaml` executa 4 modos e gera `out/case5_ape_linbo3/audit_case5/results/neff.csv`; modo líder `n_eff=2.207327`. Limitação registrada: `C(x,y)` ainda não vem de pré-processador FEM de difusão anisotrópica, e `delta_x/delta_z` seguem desativados no ponto de sanidade.
 
-- [ ] T-012 — Implementar o Caso 6, Ti:LiNbO3
+- [x] T-012 — Implementar o Caso 6, Ti:LiNbO3
   - Responsável: Codex
   - Arquivos: `src/material_profile.cpp`, `src/config.cpp`, `src/global_assembly.cpp`, `src/app.cpp`, `cases/case6_ti_linbo3.yaml`, `tests/global_tests.cpp`
   - Critério de aceite: o solver executa pelo menos um ponto da Fig. 7, gera CSV e separa corretamente parâmetros ordinário/extraordinário.
   - Comando de teste: `bash scripts/run_case.sh cases/case6_ti_linbo3.yaml audit_case6`
+  - **Resultado Codex (2026-06-16):** implementado `ti_diffused_linbo3_anisotropic` com Eqs. 11-12 de `docs/06`, usando parâmetros extraordinários e ordinários separados. O YAML `cases/case6_ti_linbo3.yaml` executa um ponto em `W=7 um` e gera `out/case6_ti_linbo3/audit_case6/results/neff.csv`; modo líder `n_eff=2.210077`. O CSV nodal exporta `nx` e `nz` para auditar a separação dos ramos. Falta sweep em `W`, extração de `W_x/W_y` e figura.
 
 ### Fase C - Geração de CSVs e figuras
 
@@ -148,7 +148,7 @@ Casos faltantes:
   - Arquivos: `scripts/run_all.sh`, `scripts/plot_all.py`
   - Critério de aceite: um comando roda os casos implementados e outro gera/consolida as figuras disponíveis, sem fingir que Casos 4-6 estão prontos.
   - Comando de teste: `bash scripts/run_all.sh && python3 scripts/plot_all.py`
-  - **Resultado Codex (2026-06-15):** criados `scripts/run_all.sh` e `scripts/plot_all.py`. O fluxo padrão usa as pastas `final_run/`; o modo `--smoke` usa `build/test_output/run_all_smoke/`. Validação executada: `bash scripts/run_all.sh --smoke && python3 scripts/plot_all.py --smoke`. O `plot_all.py` lista explicitamente Casos 4-6 como pendentes e grava `out/reproduction_artifacts.csv`.
+  - **Resultado Codex (2026-06-16):** `scripts/run_all.sh` e `scripts/plot_all.py` agora incluem os pontos de sanidade dos Casos 4, 5 e 6. Validação executada: `bash scripts/run_all.sh --smoke && python3 scripts/plot_all.py --smoke`. O `plot_all.py` lista como pendentes apenas os sweeps/figuras finais e grava `out/reproduction_artifacts.csv`.
 
 ### Fase D - Documentação científica
 
@@ -162,9 +162,9 @@ Casos faltantes:
 - [x] T-018 — Atualizar `docs/09` com a matriz real dos casos
   - Responsável: Claude
   - Arquivos: `docs/09_resumo_dos_casos_de_teste.md`
-  - Critério de aceite: Caso 2 aparece como pronto; Caso 1 como parcial; Caso 3 como solver/ponto implementado mas sem figura; Casos 4-6 como pendentes.
+  - Critério de aceite: Caso 2 aparece como pronto; Casos 1, 3, 4, 5 e 6 aparecem como parciais, distinguindo figuras finais de pontos de sanidade.
   - Comando de teste: verificação manual
-  - **Resultado (2026-06-15):** seção "Estado atual de reprodução" atualizada para 2026-06-15 com: Caso 1 com resultado T-004 (guia surface, B confirmados); Caso 3 com T-005 concluído (BLOCKER documentado); Caso 4 com T-007/T-008 concluídos em nível pontual; Casos 5-6 FALTANDO com referência a docs/06.
+  - **Resultado (2026-06-16):** seção "Estado atual de reprodução" atualizada com: Caso 1 com resultado T-004; Caso 3 com sweep/figura e bloqueio de gradientes; Caso 4 com T-007/T-008 em nível pontual; Casos 5-6 com T-011/T-012 em nível pontual de sanidade e limitações explícitas.
 
 - [x] T-019 — Documentar o Caso 3 depois do sweep
   - Responsável: Claude
@@ -180,7 +180,7 @@ Casos faltantes:
   - Arquivos: `RESULTADOS_REPRODUCAO.md`
   - Critério de aceite: o relatório lista metodologia, comandos, tabelas, CSVs e figuras dos casos prontos; casos pendentes são declarados como pendentes, não como validados.
   - Comando de teste: `/usr/bin/ctest --test-dir build --output-on-failure`
-  - **Resultado (2026-06-15):** relatório atualizado com data 2026-06-15, resultado T-004 detalhado (guia surface assimétrico, B confirmados, discrepância explicada por curva Marcatili/EIM), T-005 referenciado na tabela consolidada e Caso 4 atualizado como ponto de sanidade implementado. 1 caso PASS (Fig. 2), 3 PARTIAL (Figs. 1, 4 e 5), 2 MISSING (Figs. 6–7).
+  - **Resultado (2026-06-16):** relatório atualizado com Casos 5 e 6 como pontos de sanidade implementados. Estado atual: 1 caso PASS (Fig. 2) e 5 casos PARTIAL (Figs. 1, 4, 5, 6 e 7), sem casos MISSING na camada de execução pontual.
 
 ### Fase F - Limpeza final do repositório
 
@@ -237,6 +237,9 @@ python3 scripts/consolidate_planar_diffuse_sweep.py --sweep-root out/planar_diff
 python3 scripts/plot_planar_diffuse_sweep.py --sweep-root out/planar_diffuse_sweep/final_run
 
 bash scripts/run_case.sh cases/channel_diffused_isotropic_case.yaml final_point_case3
+bash scripts/run_case.sh cases/case4_gaussian_gaussian_channel.yaml audit_case4
+bash scripts/run_case.sh cases/case5_ape_linbo3.yaml audit_case5
+bash scripts/run_case.sh cases/case6_ti_linbo3.yaml audit_case6
 ```
 
 Comandos esperados ao final das tarefas:
@@ -249,6 +252,14 @@ python3 scripts/plot_all.py
 python3 scripts/run_case3_channel_diffused_sweep.py --output-root out/case3_channel_diffused_isotropic/final_run
 python3 scripts/consolidate_case3_channel_diffused_sweep.py --sweep-root out/case3_channel_diffused_isotropic/final_run
 python3 scripts/plot_case3_channel_diffused_sweep.py --sweep-root out/case3_channel_diffused_isotropic/final_run
+```
+
+Pendências após T-011/T-012:
+
+```bash
+# Caso 4: criar scripts equivalentes de sweep/consolidação/plot para a Fig. 5.
+# Caso 5: substituir a concentração proxy por pré-processador de difusão APE e gerar a Fig. 6.
+# Caso 6: criar sweep em W, extrair W_x/W_y e gerar a Fig. 7.
 ```
 
 ## 6. Arquivos finais obrigatórios
@@ -266,8 +277,8 @@ python3 scripts/plot_case3_channel_diffused_sweep.py --sweep-root out/case3_chan
 - `cases/planar_diffuse_isotropic_case.yaml`
 - `cases/channel_diffused_isotropic_case.yaml`
 - `cases/case4_gaussian_gaussian_channel.yaml`
-- `cases/case5_ape_linbo3.yaml` - a criar.
-- `cases/case6_ti_linbo3.yaml` - a criar.
+- `cases/case5_ape_linbo3.yaml`
+- `cases/case6_ti_linbo3.yaml`
 - `scripts/build.sh`
 - `scripts/test.sh`
 - `scripts/run_case.sh`

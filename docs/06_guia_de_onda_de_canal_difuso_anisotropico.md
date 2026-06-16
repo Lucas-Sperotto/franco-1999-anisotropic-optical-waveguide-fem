@@ -30,6 +30,22 @@ A dispersão do índice de refração não foi considerada neste exemplo. Uma an
 
 Do ponto de vista didático, este é o primeiro caso em que o leitor precisa acompanhar, simultaneamente, a formulação modal, a anisotropia do meio e a origem física do perfil de índice. Para a futura implementação, isso sugere separar claramente a discretização FEM da modelagem específica do processo APE.
 
+### Estado de implementação do Caso 5
+
+O repositório já possui um ponto de sanidade para este caso em `cases/case5_ape_linbo3.yaml`, com o modelo `ape_linbo3_anisotropic_sanity`.
+
+A implementação usa a relação índice-concentração da Eq. (10) para o ramo extraordinário, mapeado para `n_x` na formulação escalar atual, e mantém `n_z` como ramo ordinário constante. Como o artigo informa que a concentração $C(x,y)$ vem de uma solução separada da equação de difusão anisotrópica 2D, o ponto atual **não** tenta reproduzir essa etapa por palpite. Em vez disso, usa uma concentração proxy explícita:
+
+$$
+C(x,y) = C_\mathrm{peak}
+\exp\left[-\frac{(x-x_0)^2}{d_x^2}\right]
+\,\exp\left[-\frac{(y-y_s)^2}{d_y^2}\right],
+$$
+
+aplicada apenas no substrato. Essa escolha serve para exercitar o contrato anisotrópico, o parser, a montagem global e a exportação de CSVs. A reprodução final da Fig. 6 ainda exige implementar ou importar o pré-processamento de difusão APE que gera $C(x,y)$.
+
+> Observação editorial: no código, os termos de gradiente `delta_x` e `delta_z` permanecem desativados para este ponto de sanidade até a rota não simétrica ser auditada nas varreduras finais.
+
 ## B. Guia de onda Ti-difundido em $LiNbO_3$
 
 Se o caso APE já introduz anisotropia e difusão, o guia $Ti:LiNbO_3$ acrescenta ainda dependência explícita de comprimento de onda e parâmetros distintos para os ramos extraordinário e ordinário. Trata-se, portanto, do caso materialmente mais rico entre os exemplos do artigo.
@@ -118,6 +134,19 @@ A Fig. 7 mostra o índice efetivo calculado para o modo $E^x_{11}$ e os tamanhos
 **Fig. 7.** Índice efetivo ($n_{\mathrm{eff}}$) e tamanhos de modo $W_x$ e $W_y$ em função da largura inicial da faixa de Ti.
 
 Uma observação importante para a implementação é que as expressões (11)-(13) usam a mesma forma funcional para os dois ramos, mas com parâmetros distintos. Em um código futuro, isso sugere instanciar explicitamente os conjuntos extraordinário e ordinário de parâmetros, evitando tratar $d_x$, $d_y$, $n_b$ e $\Delta n_s$ como quantidades únicas quando o caso físico exigir diferenciação entre os ramos.
+
+### Estado de implementação do Caso 6
+
+O repositório já possui um ponto de sanidade para este caso em `cases/case6_ti_linbo3.yaml`, com o modelo `ti_diffused_linbo3_anisotropic`.
+
+A implementação usa diretamente as Eqs. (11)-(12), com conjuntos separados de parâmetros para os ramos extraordinário e ordinário. A convenção adotada para o ponto atual é:
+
+- `n_x`: ramo extraordinário;
+- `n_z`: ramo ordinário;
+- `g_z^2 = 1/n_z^2`;
+- `W = 7.0 um` no ponto de sanidade.
+
+Os valores derivados $\Delta n_{se}=0.00446$ e $\Delta n_{so}=0.01217$ são lidos do YAML como parâmetros de entrada, conforme a tabela consolidada em [09_resumo_dos_casos_de_teste.md](09_resumo_dos_casos_de_teste.md). A reprodução final da Fig. 7 ainda exige varrer `W`, extrair os tamanhos de modo `W_x` e `W_y` e gerar o gráfico comparável à figura do artigo.
 
 Os exemplos desta seção correspondem aos **Casos 5 e 6** sintetizados em [09_resumo_dos_casos_de_teste.md](09_resumo_dos_casos_de_teste.md) e fecham a sequência de validação física do artigo antes das conclusões em [07_conclusoes.md](07_conclusoes.md).
 
