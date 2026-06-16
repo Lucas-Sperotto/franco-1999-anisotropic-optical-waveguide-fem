@@ -86,12 +86,36 @@ IMPLEMENTED_POINTS = (
             Path("results/material_profile_summary.txt"),
         ),
     ),
+    PointPipeline(
+        case_id="case5",
+        description="Fig. 6 - APE LiNbO3 anisotropic sanity point",
+        default_root=Path("out/case5_ape_linbo3/final_point"),
+        smoke_root=Path("build/test_output/run_all_smoke/case5_ape_linbo3"),
+        required_artifacts=(
+            Path("results/neff.csv"),
+            Path("results/dispersion_curve_points.csv"),
+            Path("results/nodal_material_fields.csv"),
+            Path("results/material_profile_summary.txt"),
+        ),
+    ),
+    PointPipeline(
+        case_id="case6",
+        description="Fig. 7 - Ti:LiNbO3 anisotropic sanity point",
+        default_root=Path("out/case6_ti_linbo3/final_point"),
+        smoke_root=Path("build/test_output/run_all_smoke/case6_ti_linbo3"),
+        required_artifacts=(
+            Path("results/neff.csv"),
+            Path("results/dispersion_curve_points.csv"),
+            Path("results/nodal_material_fields.csv"),
+            Path("results/material_profile_summary.txt"),
+        ),
+    ),
 )
 
 PENDING_CASES = (
     "case4/Fig. 5 Gaussian-Gaussian channel: sweep and figure not implemented yet",
-    "case5/Fig. 6 APE LiNbO3: anisotropic profile not implemented",
-    "case6/Fig. 7 Ti:LiNbO3: anisotropic profile not implemented",
+    "case5/Fig. 6 APE LiNbO3: full dispersion sweep and concentration preprocessor not implemented yet",
+    "case6/Fig. 7 Ti:LiNbO3: W sweep, mode-size extraction, and figure not implemented yet",
 )
 
 
@@ -111,6 +135,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--case2-root", default=None, help="Override Case 2 sweep root.")
     parser.add_argument("--case3-root", default=None, help="Override Case 3 sweep root.")
     parser.add_argument("--case4-root", default=None, help="Override Case 4 point root.")
+    parser.add_argument("--case5-root", default=None, help="Override Case 5 point root.")
+    parser.add_argument("--case6-root", default=None, help="Override Case 6 point root.")
     parser.add_argument(
         "--manifest",
         default="out/reproduction_artifacts.csv",

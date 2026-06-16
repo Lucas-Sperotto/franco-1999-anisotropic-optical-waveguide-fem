@@ -1,0 +1,34 @@
+schema_version: 1
+
+case:
+  id: case06_ti_diffused_linbo3_sanity
+  description: "Case 6 Ti:LiNbO3 anisotropic sanity point from docs/06 Eqs. 11-12"
+
+mesh:
+  file: ../meshes/channel_a2b_b1_reference.mesh
+
+material:
+  model: ti_diffused_linbo3_anisotropic
+  cover_index: 1.00
+  extraordinary_substrate_index: 2.2125
+  ordinary_substrate_index: 2.1383
+  extraordinary_surface_delta_index: 0.00446
+  ordinary_surface_delta_index: 0.01217
+  extraordinary_diffusion_width_x: 4.60
+  extraordinary_diffusion_depth_y: 4.00
+  ordinary_diffusion_width_x: 6.23
+  ordinary_diffusion_depth_y: 4.98
+  strip_width: 7.00
+  core_center_x: 0.00
+  surface_y: 0.00
+
+boundary:
+  condition: dirichlet_zero_on_boundary_nodes
+
+solver:
+  requested_modes: 1
+  wavelength_um: 1.523
+  planar_x_invariant_reduction: false
+
+output:
+  tag: case6_ti_diffused_linbo3_sanity

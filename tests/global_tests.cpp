@@ -582,6 +582,127 @@ int main() {
         expect_true(gaussian_channel_eigen_solution.eigenpairs.front().has_neff,
                     "expected a valid Gaussian-Gaussian channel n_eff");
 
+        const waveguide::ApeLinbo3Profile ape_profile{
+            1.0,
+            2.20,
+            2.20,
+            0.12,
+            0.01,
+            3.836665,
+            3.509986,
+            0.0,
+            0.0,
+        };
+        const double expected_ape_peak =
+            ape_profile.extraordinary_substrate_index +
+            ape_profile.delta_extraordinary_index * (1.0 - std::exp(-0.11));
+        expect_near(
+            waveguide::evaluate_ape_linbo3_concentration(
+                waveguide::Point2D{0.0, 0.0}, ape_profile),
+            ape_profile.peak_concentration,
+            "APE LiNbO3 center concentration");
+        expect_near(
+            waveguide::evaluate_ape_linbo3_extraordinary_index(
+                waveguide::Point2D{0.0, 0.0}, ape_profile),
+            expected_ape_peak,
+            "APE LiNbO3 center extraordinary index");
+        expect_near(
+            waveguide::evaluate_ape_linbo3_extraordinary_index(
+                waveguide::Point2D{0.0, -0.5}, ape_profile),
+            ape_profile.cover_index,
+            "APE LiNbO3 cover index");
+
+        const waveguide::GlobalAssemblyResult ape_assembly =
+            waveguide::assemble_global_ape_linbo3_system(
+                diffused_channel_mesh,
+                ape_profile,
+                waveguide::make_default_article_local_assembly_options(
+                    2.0 * kPi / 0.6328));
+        const double ape_center_nx2 =
+            waveguide::get_global_material_value(
+                ape_assembly.material_fields.nx2_by_node_id, 105, "nx2");
+        const double ape_center_nz2 =
+            waveguide::get_global_material_value(
+                ape_assembly.material_fields.nz2_by_node_id, 105, "nz2");
+        expect_true(ape_center_nx2 > ape_center_nz2,
+                    "APE LiNbO3 should perturb only the extraordinary/nx branch");
+        expect_true(
+            waveguide::is_dense_matrix_symmetric(ape_assembly.matrices.F_full),
+            "APE LiNbO3 F_full should remain symmetric while gradient flags are disabled");
+
+        const waveguide::GeneralizedEigenSolution ape_eigen_solution =
+            waveguide::solve_generalized_eigenproblem_dense(
+                ape_assembly.matrices.F_reduced,
+                ape_assembly.matrices.M_reduced,
+                2.0 * kPi / 0.6328,
+                1);
+        expect_true(ape_eigen_solution.eigenpairs.size() == 1,
+                    "expected one APE LiNbO3 eigenpair");
+        expect_true(ape_eigen_solution.eigenpairs.front().has_neff,
+                    "expected a valid APE LiNbO3 n_eff");
+
+        const waveguide::TiDiffusedLinbo3Profile ti_profile{
+            1.0,
+            2.2125,
+            2.1383,
+            0.00446,
+            0.01217,
+            4.60,
+            4.00,
+            6.23,
+            4.98,
+            7.0,
+            0.0,
+            0.0,
+        };
+        const double ti_center_extraordinary_n2 =
+            waveguide::evaluate_ti_diffused_linbo3_extraordinary_index_squared(
+                waveguide::Point2D{0.0, 0.0}, ti_profile);
+        const double ti_center_ordinary_n2 =
+            waveguide::evaluate_ti_diffused_linbo3_ordinary_index_squared(
+                waveguide::Point2D{0.0, 0.0}, ti_profile);
+        expect_true(ti_center_extraordinary_n2 >
+                        ti_profile.extraordinary_substrate_index *
+                            ti_profile.extraordinary_substrate_index,
+                    "Ti:LiNbO3 extraordinary branch should increase at the strip center");
+        expect_true(ti_center_ordinary_n2 >
+                        ti_profile.ordinary_substrate_index *
+                            ti_profile.ordinary_substrate_index,
+                    "Ti:LiNbO3 ordinary branch should increase at the strip center");
+        expect_true(ti_center_extraordinary_n2 != ti_center_ordinary_n2,
+                    "Ti:LiNbO3 ordinary and extraordinary branches should remain distinct");
+        expect_near(
+            waveguide::evaluate_ti_diffused_linbo3_extraordinary_index_squared(
+                waveguide::Point2D{0.0, -0.5}, ti_profile),
+            ti_profile.cover_index * ti_profile.cover_index,
+            "Ti:LiNbO3 cover extraordinary branch");
+
+        const waveguide::GlobalAssemblyResult ti_assembly =
+            waveguide::assemble_global_ti_diffused_linbo3_system(
+                diffused_channel_mesh,
+                ti_profile,
+                waveguide::make_default_article_local_assembly_options(
+                    2.0 * kPi / 1.523));
+        expect_true(
+            waveguide::is_dense_matrix_symmetric(ti_assembly.matrices.F_full),
+            "Ti:LiNbO3 F_full should remain symmetric while gradient flags are disabled");
+        expect_true(
+            waveguide::max_abs_dense_matrix_difference(
+                ti_assembly.matrices.M_full,
+                gaussian_channel_assembly.matrices.M_full) > 1.0e-6,
+            "Ti:LiNbO3 assembly should differ from the isotropic Gaussian channel");
+
+        const waveguide::GeneralizedEigenSolution ti_eigen_solution =
+            waveguide::solve_generalized_eigenproblem_dense(
+                ti_assembly.matrices.F_reduced,
+                ti_assembly.matrices.M_reduced,
+                2.0 * kPi / 1.523,
+                1);
+        expect_true(ti_eigen_solution.eigenpairs.size() == 1,
+                    "expected one Ti:LiNbO3 eigenpair");
+        expect_true(ti_eigen_solution.eigenpairs.front().has_neff,
+                    "expected a valid Ti:LiNbO3 n_eff");
+
         std::cout << "waveguide_global_tests: all checks passed\n";
         return EXIT_SUCCESS;
     } catch (const std::exception& error) {

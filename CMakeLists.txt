@@ -127,6 +127,30 @@ if(BUILD_TESTING)
             FIXTURES_SETUP waveguide_solver_case4_fixture
     )
 
+    add_test(NAME waveguide_solver_case5_smoke
+        COMMAND waveguide_solver
+            --case ${CMAKE_SOURCE_DIR}/cases/case5_ape_linbo3.yaml
+            --output ${CMAKE_BINARY_DIR}/test_output/case5
+            --run-label ctest_case5
+    )
+
+    set_tests_properties(waveguide_solver_case5_smoke
+        PROPERTIES
+            FIXTURES_SETUP waveguide_solver_case5_fixture
+    )
+
+    add_test(NAME waveguide_solver_case6_smoke
+        COMMAND waveguide_solver
+            --case ${CMAKE_SOURCE_DIR}/cases/case6_ti_linbo3.yaml
+            --output ${CMAKE_BINARY_DIR}/test_output/case6
+            --run-label ctest_case6
+    )
+
+    set_tests_properties(waveguide_solver_case6_smoke
+        PROPERTIES
+            FIXTURES_SETUP waveguide_solver_case6_fixture
+    )
+
     add_test(NAME waveguide_geometry_tests
         COMMAND waveguide_geometry_tests
     )
@@ -188,6 +212,28 @@ if(BUILD_TESTING)
     set_tests_properties(waveguide_solver_case4_smoke_artifacts
         PROPERTIES
             FIXTURES_REQUIRED waveguide_solver_case4_fixture
+    )
+
+    add_test(NAME waveguide_solver_case5_smoke_artifacts
+        COMMAND ${CMAKE_COMMAND}
+            -DSMOKE_OUTPUT_DIR=${CMAKE_BINARY_DIR}/test_output/case5
+            -P ${CMAKE_SOURCE_DIR}/tests/check_smoke_outputs.cmake
+    )
+
+    set_tests_properties(waveguide_solver_case5_smoke_artifacts
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_solver_case5_fixture
+    )
+
+    add_test(NAME waveguide_solver_case6_smoke_artifacts
+        COMMAND ${CMAKE_COMMAND}
+            -DSMOKE_OUTPUT_DIR=${CMAKE_BINARY_DIR}/test_output/case6
+            -P ${CMAKE_SOURCE_DIR}/tests/check_smoke_outputs.cmake
+    )
+
+    set_tests_properties(waveguide_solver_case6_smoke_artifacts
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_solver_case6_fixture
     )
 
     add_test(NAME waveguide_planar_sweep_smoke

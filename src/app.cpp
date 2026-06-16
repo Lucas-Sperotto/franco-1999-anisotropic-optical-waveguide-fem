@@ -144,6 +144,10 @@ std::string mode_index_to_label(std::size_t one_based_index,
     if (is_planar && one_based_index >= 1 && one_based_index <= 3) {
         return "TE" + std::to_string(one_based_index - 1);
     }
+    if (material_model == "ape_linbo3_anisotropic_sanity" ||
+        material_model == "ti_diffused_linbo3_anisotropic") {
+        return "Ex" + std::to_string(one_based_index);
+    }
     return "mode_" + std::to_string(one_based_index);
 }
 
@@ -343,7 +347,7 @@ std::string build_dispersion_curve_points_csv(const GeneralizedEigenSolution& so
 std::string build_nodal_material_fields_csv(const Mesh& mesh,
                                             const GlobalNodalMaterialFields& material_fields) {
     std::ostringstream stream;
-    stream << "node_id,x,y,nx2,nz2,gz2,refractive_index\n";
+    stream << "node_id,x,y,nx2,nz2,gz2,refractive_index,nx,nz\n";
     for (const MeshNode& node : mesh.nodes) {
         const double nx2 =
             get_global_material_value(material_fields.nx2_by_node_id, node.id, "nx2");
@@ -354,7 +358,9 @@ std::string build_nodal_material_fields_csv(const Mesh& mesh,
         stream << node.id << "," << format_number(node.point.x) << ","
                << format_number(node.point.y) << "," << format_number(nx2) << ","
                << format_number(nz2) << "," << format_number(gz2) << ","
-               << format_number(std::sqrt(std::max(nx2, 0.0))) << "\n";
+               << format_number(std::sqrt(std::max(nx2, 0.0))) << ","
+               << format_number(std::sqrt(std::max(nx2, 0.0))) << ","
+               << format_number(std::sqrt(std::max(nz2, 0.0))) << "\n";
     }
     return stream.str();
 }
@@ -569,6 +575,12 @@ double resolve_characteristic_b(const CaseConfig& config) {
         is_diffused_channel_material_model(config.material_model)) {
         return config.core_height;
     }
+    if (config.material_model == "ape_linbo3_anisotropic_sanity") {
+        return config.diffusion_depth_y;
+    }
+    if (config.material_model == "ti_diffused_linbo3_anisotropic") {
+        return config.strip_width;
+    }
     return config.diffusion_depth;
 }
 
@@ -742,7 +754,101 @@ int run_application(int argc, char** argv) {
                 << "formula_source: docs/ref/[12] - sbmo.1993.587213.pdf, "
                    "Fig. 4 caption, reused by Franco et al. Fig. 5.\n"
                 << "gradient_terms_note: delta_x/delta_z remain disabled until "
-                   "a non-symmetric generalized eigensolver is available.\n";
+                   "the non-symmetric route is audited for final sweeps.\n";
+        } else if (config.material_model == "ape_linbo3_anisotropic_sanity") {
+            const ApeLinbo3Profile profile{
+                config.cover_index,
+                config.ordinary_index,
+                config.extraordinary_substrate_index,
+                config.delta_extraordinary_index,
+                config.peak_concentration,
+                config.diffusion_width_x,
+                config.diffusion_depth_y,
+                config.core_center_x,
+                config.surface_y,
+            };
+            global_assembly = assemble_global_ape_linbo3_system(
+                mesh,
+                profile,
+                local_options,
+                config.boundary_condition,
+                config.planar_x_invariant_reduction);
+            material_profile_summary
+                << "material_model: ape_linbo3_anisotropic_sanity\n"
+                << "cover_index: " << format_number(profile.cover_index) << "\n"
+                << "ordinary_index_nz: " << format_number(profile.ordinary_index)
+                << "\n"
+                << "extraordinary_substrate_index_nx: "
+                << format_number(profile.extraordinary_substrate_index) << "\n"
+                << "delta_extraordinary_index: "
+                << format_number(profile.delta_extraordinary_index) << "\n"
+                << "peak_concentration: "
+                << format_number(profile.peak_concentration) << "\n"
+                << "diffusion_width_x: " << format_number(profile.diffusion_width_x)
+                << "\n"
+                << "diffusion_depth_y: " << format_number(profile.diffusion_depth_y)
+                << "\n"
+                << "core_center_x: " << format_number(profile.core_center_x) << "\n"
+                << "surface_y: " << format_number(profile.surface_y) << "\n"
+                << "profile_formula: C = C_peak * exp[-(x-x0)^2/dx^2] "
+                   "* exp[-(y-surface_y)^2/dy^2] for y >= surface_y; "
+                   "n_x = n_es + delta_n_e * (1 - exp[-11 C]); n_z = n_ordinary.\n"
+                << "implementation_limitation: docs/06 states that C(x,y) is produced "
+                   "by a separate 2D anisotropic diffusion solve. This point uses an "
+                   "explicit Gaussian proxy concentration only as a sanity check until "
+                   "that preprocessor is implemented.\n"
+                << "gradient_terms_note: delta_x/delta_z remain disabled for this "
+                   "sanity point.\n";
+        } else if (config.material_model == "ti_diffused_linbo3_anisotropic") {
+            const TiDiffusedLinbo3Profile profile{
+                config.cover_index,
+                config.extraordinary_substrate_index,
+                config.ordinary_substrate_index,
+                config.extraordinary_surface_delta_index,
+                config.ordinary_surface_delta_index,
+                config.extraordinary_diffusion_width_x,
+                config.extraordinary_diffusion_depth_y,
+                config.ordinary_diffusion_width_x,
+                config.ordinary_diffusion_depth_y,
+                config.strip_width,
+                config.core_center_x,
+                config.surface_y,
+            };
+            global_assembly = assemble_global_ti_diffused_linbo3_system(
+                mesh,
+                profile,
+                local_options,
+                config.boundary_condition,
+                config.planar_x_invariant_reduction);
+            material_profile_summary
+                << "material_model: ti_diffused_linbo3_anisotropic\n"
+                << "cover_index: " << format_number(profile.cover_index) << "\n"
+                << "extraordinary_substrate_index_nx: "
+                << format_number(profile.extraordinary_substrate_index) << "\n"
+                << "ordinary_substrate_index_nz: "
+                << format_number(profile.ordinary_substrate_index) << "\n"
+                << "extraordinary_surface_delta_index: "
+                << format_number(profile.extraordinary_surface_delta_index) << "\n"
+                << "ordinary_surface_delta_index: "
+                << format_number(profile.ordinary_surface_delta_index) << "\n"
+                << "extraordinary_diffusion_width_x: "
+                << format_number(profile.extraordinary_diffusion_width_x) << "\n"
+                << "extraordinary_diffusion_depth_y: "
+                << format_number(profile.extraordinary_diffusion_depth_y) << "\n"
+                << "ordinary_diffusion_width_x: "
+                << format_number(profile.ordinary_diffusion_width_x) << "\n"
+                << "ordinary_diffusion_depth_y: "
+                << format_number(profile.ordinary_diffusion_depth_y) << "\n"
+                << "strip_width: " << format_number(profile.strip_width) << "\n"
+                << "core_center_x: " << format_number(profile.core_center_x) << "\n"
+                << "surface_y: " << format_number(profile.surface_y) << "\n"
+                << "profile_formula: n_e,o^2 = n_b_e,o^2 + "
+                   "[(n_b_e,o + delta_n_s_e,o)^2 - n_b_e,o^2] "
+                   "* exp[-(y-surface_y)^2/d_y_e,o^2] * f(2x/W), with f from docs/06 Eq. 12.\n"
+                << "axis_mapping: n_x uses the extraordinary branch and n_z uses the "
+                   "ordinary branch for this x-cut Ex-mode sanity point.\n"
+                << "gradient_terms_note: delta_x/delta_z remain disabled until final "
+                   "non-symmetric-gradient sweeps are audited.\n";
         } else if (config.material_model == "rectangular_channel_step_index") {
             const RectangularChannelStepIndexProfile profile{
                 config.cover_index,
@@ -825,7 +931,7 @@ int run_application(int argc, char** argv) {
                        "homogeneous isotropic constant case, the first planar diffuse "
                        "isotropic variable-coefficient case, the initial homogeneous "
                        "rectangular channel case, and the implemented diffused channel "
-                       "isotropic cases.\n";
+                       "isotropic and anisotropic sanity cases.\n";
         run_summary << "schema_version: " << config.schema_version << "\n";
         run_summary << "case_id: " << config.case_id << "\n";
         run_summary << "description: " << config.description << "\n";
@@ -860,6 +966,45 @@ int run_application(int argc, char** argv) {
             run_summary << "peak_index: " << format_number(config.peak_index) << "\n";
             run_summary << "core_width: " << format_number(config.core_width) << "\n";
             run_summary << "core_height: " << format_number(config.core_height) << "\n";
+            run_summary << "core_center_x: " << format_number(config.core_center_x)
+                        << "\n";
+            run_summary << "surface_y: " << format_number(config.surface_y) << "\n";
+        } else if (config.material_model == "ape_linbo3_anisotropic_sanity") {
+            run_summary << "cover_index: " << format_number(config.cover_index) << "\n";
+            run_summary << "ordinary_index: " << format_number(config.ordinary_index)
+                        << "\n";
+            run_summary << "extraordinary_substrate_index: "
+                        << format_number(config.extraordinary_substrate_index) << "\n";
+            run_summary << "delta_extraordinary_index: "
+                        << format_number(config.delta_extraordinary_index) << "\n";
+            run_summary << "peak_concentration: "
+                        << format_number(config.peak_concentration) << "\n";
+            run_summary << "diffusion_width_x: "
+                        << format_number(config.diffusion_width_x) << "\n";
+            run_summary << "diffusion_depth_y: "
+                        << format_number(config.diffusion_depth_y) << "\n";
+            run_summary << "core_center_x: " << format_number(config.core_center_x)
+                        << "\n";
+            run_summary << "surface_y: " << format_number(config.surface_y) << "\n";
+        } else if (config.material_model == "ti_diffused_linbo3_anisotropic") {
+            run_summary << "cover_index: " << format_number(config.cover_index) << "\n";
+            run_summary << "extraordinary_substrate_index: "
+                        << format_number(config.extraordinary_substrate_index) << "\n";
+            run_summary << "ordinary_substrate_index: "
+                        << format_number(config.ordinary_substrate_index) << "\n";
+            run_summary << "extraordinary_surface_delta_index: "
+                        << format_number(config.extraordinary_surface_delta_index) << "\n";
+            run_summary << "ordinary_surface_delta_index: "
+                        << format_number(config.ordinary_surface_delta_index) << "\n";
+            run_summary << "extraordinary_diffusion_width_x: "
+                        << format_number(config.extraordinary_diffusion_width_x) << "\n";
+            run_summary << "extraordinary_diffusion_depth_y: "
+                        << format_number(config.extraordinary_diffusion_depth_y) << "\n";
+            run_summary << "ordinary_diffusion_width_x: "
+                        << format_number(config.ordinary_diffusion_width_x) << "\n";
+            run_summary << "ordinary_diffusion_depth_y: "
+                        << format_number(config.ordinary_diffusion_depth_y) << "\n";
+            run_summary << "strip_width: " << format_number(config.strip_width) << "\n";
             run_summary << "core_center_x: " << format_number(config.core_center_x)
                         << "\n";
             run_summary << "surface_y: " << format_number(config.surface_y) << "\n";
@@ -1061,9 +1206,9 @@ int run_application(int argc, char** argv) {
                            "article-oriented local formulation.\n";
                 summary << "transition_note: The homogeneous constant case and the planar "
                            "diffuse isotropic case share the same global assembly path; "
-                           "the diffused channel cases also use nodal material fields, "
-                           "with derivative terms deferred until the profile convention "
-                           "is audited.\n";
+                           "the diffused channel and LiNbO3 anisotropic cases also use "
+                           "nodal material fields, with derivative terms deferred until "
+                           "the final profile conventions are audited.\n";
                 summary << "node_count: " << global_assembly.node_count << "\n";
                 summary << "element_count: " << global_assembly.element_count << "\n";
                 summary << "planar_x_invariant_reduction: "
@@ -1105,6 +1250,39 @@ int run_application(int argc, char** argv) {
                     summary << "peak_index: " << format_number(config.peak_index) << "\n";
                     summary << "core_width: " << format_number(config.core_width) << "\n";
                     summary << "core_height: " << format_number(config.core_height)
+                            << "\n";
+                } else if (config.material_model == "ape_linbo3_anisotropic_sanity") {
+                    summary << "cover_index: " << format_number(config.cover_index)
+                            << "\n";
+                    summary << "ordinary_index: " << format_number(config.ordinary_index)
+                            << "\n";
+                    summary << "extraordinary_substrate_index: "
+                            << format_number(config.extraordinary_substrate_index)
+                            << "\n";
+                    summary << "delta_extraordinary_index: "
+                            << format_number(config.delta_extraordinary_index) << "\n";
+                    summary << "peak_concentration: "
+                            << format_number(config.peak_concentration) << "\n";
+                    summary << "diffusion_width_x: "
+                            << format_number(config.diffusion_width_x) << "\n";
+                    summary << "diffusion_depth_y: "
+                            << format_number(config.diffusion_depth_y) << "\n";
+                } else if (config.material_model ==
+                           "ti_diffused_linbo3_anisotropic") {
+                    summary << "cover_index: " << format_number(config.cover_index)
+                            << "\n";
+                    summary << "extraordinary_substrate_index: "
+                            << format_number(config.extraordinary_substrate_index)
+                            << "\n";
+                    summary << "ordinary_substrate_index: "
+                            << format_number(config.ordinary_substrate_index) << "\n";
+                    summary << "extraordinary_surface_delta_index: "
+                            << format_number(config.extraordinary_surface_delta_index)
+                            << "\n";
+                    summary << "ordinary_surface_delta_index: "
+                            << format_number(config.ordinary_surface_delta_index)
+                            << "\n";
+                    summary << "strip_width: " << format_number(config.strip_width)
                             << "\n";
                 }
                 summary << "boundary_node_ids: "
@@ -1203,7 +1381,8 @@ int run_application(int argc, char** argv) {
             results_dir / "README.txt",
             "This run validates local quadrature-based element matrices, global assembly,\n"
             "Dirichlet elimination on boundary nodes, and a dense generalized eigen solve\n"
-            "for homogeneous, planar diffuse, rectangular channel, and diffused channel cases.\n");
+            "for homogeneous, planar diffuse, rectangular channel, diffused channel,\n"
+            "and LiNbO3 anisotropic sanity cases.\n");
 
         std::ostringstream execution_log;
         execution_log << "waveguide_solver execution log\n";
@@ -1255,7 +1434,7 @@ int run_application(int argc, char** argv) {
         }
         std::cout << "  material      : " << config.material_model << "\n";
         std::cout << "  output folder : " << output_dir.string() << "\n";
-        std::cout << "  note          : dense global solver active for constant, planar diffuse, rectangular channel, and diffused channel isotropic cases\n";
+        std::cout << "  note          : dense global solver active for constant, planar diffuse, rectangular channel, diffused channel, and LiNbO3 anisotropic sanity cases\n";
 
         return 0;
     } catch (const std::exception& error) {

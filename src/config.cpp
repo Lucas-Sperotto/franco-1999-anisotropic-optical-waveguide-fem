@@ -189,6 +189,8 @@ void validate_material_model(const std::string& material_model) {
         material_model != "planar_diffuse_isotropic_surface_exponential" &&
         material_model != "channel_diffused_isotropic_circular" &&
         material_model != "channel_diffused_isotropic_gaussian_gaussian" &&
+        material_model != "ape_linbo3_anisotropic_sanity" &&
+        material_model != "ti_diffused_linbo3_anisotropic" &&
         material_model != "rectangular_channel_step_index") {
         throw std::runtime_error(
             "Unsupported material.model '" + material_model +
@@ -197,6 +199,8 @@ void validate_material_model(const std::string& material_model) {
             "planar_diffuse_isotropic_surface_exponential, "
             "channel_diffused_isotropic_circular, "
             "channel_diffused_isotropic_gaussian_gaussian, "
+            "ape_linbo3_anisotropic_sanity, "
+            "ti_diffused_linbo3_anisotropic, "
             "rectangular_channel_step_index");
     }
 }
@@ -320,6 +324,50 @@ CaseConfig load_case_config(const std::filesystem::path& case_file) {
             parse_required_positive_double(config, "material.core_width");
         config.core_height =
             parse_required_positive_double(config, "material.core_height");
+        config.core_center_x =
+            parse_required_double(config, "material.core_center_x");
+        config.surface_y =
+            parse_required_double(config, "material.surface_y");
+    } else if (config.material_model == "ape_linbo3_anisotropic_sanity") {
+        config.cover_index =
+            parse_required_positive_double(config, "material.cover_index");
+        config.ordinary_index =
+            parse_required_positive_double(config, "material.ordinary_index");
+        config.extraordinary_substrate_index = parse_required_positive_double(
+            config, "material.extraordinary_substrate_index");
+        config.delta_extraordinary_index = parse_required_nonnegative_double(
+            config, "material.delta_extraordinary_index");
+        config.peak_concentration =
+            parse_required_nonnegative_double(config, "material.peak_concentration");
+        config.diffusion_width_x =
+            parse_required_positive_double(config, "material.diffusion_width_x");
+        config.diffusion_depth_y =
+            parse_required_positive_double(config, "material.diffusion_depth_y");
+        config.core_center_x =
+            parse_required_double(config, "material.core_center_x");
+        config.surface_y =
+            parse_required_double(config, "material.surface_y");
+    } else if (config.material_model == "ti_diffused_linbo3_anisotropic") {
+        config.cover_index =
+            parse_required_positive_double(config, "material.cover_index");
+        config.extraordinary_substrate_index = parse_required_positive_double(
+            config, "material.extraordinary_substrate_index");
+        config.ordinary_substrate_index =
+            parse_required_positive_double(config, "material.ordinary_substrate_index");
+        config.extraordinary_surface_delta_index = parse_required_nonnegative_double(
+            config, "material.extraordinary_surface_delta_index");
+        config.ordinary_surface_delta_index = parse_required_nonnegative_double(
+            config, "material.ordinary_surface_delta_index");
+        config.extraordinary_diffusion_width_x = parse_required_positive_double(
+            config, "material.extraordinary_diffusion_width_x");
+        config.extraordinary_diffusion_depth_y = parse_required_positive_double(
+            config, "material.extraordinary_diffusion_depth_y");
+        config.ordinary_diffusion_width_x = parse_required_positive_double(
+            config, "material.ordinary_diffusion_width_x");
+        config.ordinary_diffusion_depth_y = parse_required_positive_double(
+            config, "material.ordinary_diffusion_depth_y");
+        config.strip_width =
+            parse_required_positive_double(config, "material.strip_width");
         config.core_center_x =
             parse_required_double(config, "material.core_center_x");
         config.surface_y =

@@ -76,6 +76,47 @@ void validate_channel_gaussian_gaussian_profile(
     }
 }
 
+void validate_ape_linbo3_profile(const ApeLinbo3Profile& profile) {
+    if (profile.cover_index <= 0.0 || profile.ordinary_index <= 0.0 ||
+        profile.extraordinary_substrate_index <= 0.0) {
+        throw std::runtime_error("The APE LiNbO3 profile requires positive indices");
+    }
+    if (profile.delta_extraordinary_index < 0.0) {
+        throw std::runtime_error(
+            "The APE LiNbO3 profile requires a nonnegative delta_extraordinary_index");
+    }
+    if (profile.peak_concentration < 0.0 || profile.peak_concentration > 1.0) {
+        throw std::runtime_error(
+            "The APE LiNbO3 profile requires 0 <= peak_concentration <= 1");
+    }
+    if (profile.diffusion_width_x <= 0.0 || profile.diffusion_depth_y <= 0.0) {
+        throw std::runtime_error(
+            "The APE LiNbO3 profile requires positive diffusion dimensions");
+    }
+}
+
+void validate_ti_diffused_linbo3_profile(const TiDiffusedLinbo3Profile& profile) {
+    if (profile.cover_index <= 0.0 ||
+        profile.extraordinary_substrate_index <= 0.0 ||
+        profile.ordinary_substrate_index <= 0.0) {
+        throw std::runtime_error(
+            "The Ti:LiNbO3 profile requires positive substrate indices");
+    }
+    if (profile.extraordinary_surface_delta_index < 0.0 ||
+        profile.ordinary_surface_delta_index < 0.0) {
+        throw std::runtime_error(
+            "The Ti:LiNbO3 profile requires nonnegative surface index changes");
+    }
+    if (profile.extraordinary_diffusion_width_x <= 0.0 ||
+        profile.extraordinary_diffusion_depth_y <= 0.0 ||
+        profile.ordinary_diffusion_width_x <= 0.0 ||
+        profile.ordinary_diffusion_depth_y <= 0.0 ||
+        profile.strip_width <= 0.0) {
+        throw std::runtime_error(
+            "The Ti:LiNbO3 profile requires positive diffusion dimensions and strip_width");
+    }
+}
+
 bool is_point_inside_rectangular_channel_core(
     const Point2D& point,
     const RectangularChannelStepIndexProfile& profile) {
@@ -117,6 +158,34 @@ Point2D compute_triangle_centroid(const TriangleGeometry& geometry) {
         (geometry.vertices[0].y + geometry.vertices[1].y + geometry.vertices[2].y) /
             3.0,
     };
+}
+
+double square(double value) {
+    return value * value;
+}
+
+double evaluate_ti_lateral_weight(double x, double strip_width, double diffusion_width) {
+    const double scale = strip_width / (2.0 * diffusion_width);
+    const double normalized_x = 2.0 * x / strip_width;
+    return 0.5 * (std::erf(scale * (1.0 + normalized_x)) +
+                  std::erf(scale * (1.0 - normalized_x)));
+}
+
+double evaluate_ti_branch_index_squared(double x,
+                                        double y,
+                                        double substrate_index,
+                                        double surface_delta_index,
+                                        double diffusion_width_x,
+                                        double diffusion_depth_y,
+                                        double strip_width) {
+    const double lateral_weight =
+        evaluate_ti_lateral_weight(x, strip_width, diffusion_width_x);
+    const double depth_weight = std::exp(-(y * y) /
+                                         (diffusion_depth_y * diffusion_depth_y));
+    const double substrate_squared = square(substrate_index);
+    const double surface_squared = square(substrate_index + surface_delta_index);
+    return substrate_squared +
+           (surface_squared - substrate_squared) * depth_weight * lateral_weight;
 }
 
 }  // namespace
@@ -252,6 +321,78 @@ double evaluate_channel_gaussian_gaussian_index_squared(
     return refractive_index * refractive_index;
 }
 
+double evaluate_ape_linbo3_concentration(
+    const Point2D& point,
+    const ApeLinbo3Profile& profile) {
+    validate_ape_linbo3_profile(profile);
+
+    if (point.y < profile.surface_y) {
+        return 0.0;
+    }
+
+    const double x = point.x - profile.core_center_x;
+    const double y = point.y - profile.surface_y;
+    const double lateral_weight =
+        std::exp(-(x * x) / (profile.diffusion_width_x * profile.diffusion_width_x));
+    const double depth_weight =
+        std::exp(-(y * y) / (profile.diffusion_depth_y * profile.diffusion_depth_y));
+    return profile.peak_concentration * lateral_weight * depth_weight;
+}
+
+double evaluate_ape_linbo3_extraordinary_index(
+    const Point2D& point,
+    const ApeLinbo3Profile& profile) {
+    validate_ape_linbo3_profile(profile);
+
+    if (point.y < profile.surface_y) {
+        return profile.cover_index;
+    }
+
+    const double concentration =
+        evaluate_ape_linbo3_concentration(point, profile);
+    return profile.extraordinary_substrate_index +
+           profile.delta_extraordinary_index *
+               (1.0 - std::exp(-11.0 * concentration));
+}
+
+double evaluate_ti_diffused_linbo3_extraordinary_index_squared(
+    const Point2D& point,
+    const TiDiffusedLinbo3Profile& profile) {
+    validate_ti_diffused_linbo3_profile(profile);
+
+    if (point.y < profile.surface_y) {
+        return square(profile.cover_index);
+    }
+
+    return evaluate_ti_branch_index_squared(
+        point.x - profile.core_center_x,
+        point.y - profile.surface_y,
+        profile.extraordinary_substrate_index,
+        profile.extraordinary_surface_delta_index,
+        profile.extraordinary_diffusion_width_x,
+        profile.extraordinary_diffusion_depth_y,
+        profile.strip_width);
+}
+
+double evaluate_ti_diffused_linbo3_ordinary_index_squared(
+    const Point2D& point,
+    const TiDiffusedLinbo3Profile& profile) {
+    validate_ti_diffused_linbo3_profile(profile);
+
+    if (point.y < profile.surface_y) {
+        return square(profile.cover_index);
+    }
+
+    return evaluate_ti_branch_index_squared(
+        point.x - profile.core_center_x,
+        point.y - profile.surface_y,
+        profile.ordinary_substrate_index,
+        profile.ordinary_surface_delta_index,
+        profile.ordinary_diffusion_width_x,
+        profile.ordinary_diffusion_depth_y,
+        profile.strip_width);
+}
+
 GlobalNodalMaterialFields make_homogeneous_isotropic_global_material(
     const Mesh& mesh,
     double refractive_index) {
@@ -355,10 +496,8 @@ GlobalNodalMaterialFields make_channel_diffused_isotropic_global_material(
     // BLOCKER (T-005): n(x,y) varies in both x and y inside the core
     // (Eqs. 7-9, docs/05), so both flags should be true. However, docs/02 §3b
     // explicitly states that F2, F3, F4 become non-symmetric when delta flags
-    // are active, and recommends a non-symmetric eigensolver. The current
-    // Jacobi solver only handles symmetric systems and returns 0 modes when F
-    // is non-symmetric. Flags remain false until a QZ/LAPACK non-symmetric
-    // generalized eigensolver is implemented (assign to Codex).
+    // are active. Flags remain false until the non-symmetric route is audited
+    // for the final sweeps of these 2D profiles.
     fields.delta_x = false;
     fields.delta_z = false;
     fields.homogeneous = false;
@@ -384,7 +523,7 @@ GlobalNodalMaterialFields make_channel_gaussian_gaussian_global_material(
     GlobalNodalMaterialFields fields;
     // BLOCKER (T-005/T-008): this profile varies in x and y, so the gradient
     // terms should eventually be active. They are kept disabled until the
-    // non-symmetric generalized eigensolver needed by docs/02 §3b is available.
+    // non-symmetric route needed by docs/02 §3b is audited for final sweeps.
     fields.delta_x = false;
     fields.delta_z = false;
     fields.homogeneous = false;
@@ -397,6 +536,65 @@ GlobalNodalMaterialFields make_channel_gaussian_gaussian_global_material(
         fields.nx2_by_node_id.emplace(node.id, refractive_index_squared);
         fields.nz2_by_node_id.emplace(node.id, refractive_index_squared);
         fields.gz2_by_node_id.emplace(node.id, 1.0 / refractive_index_squared);
+    }
+
+    return fields;
+}
+
+GlobalNodalMaterialFields make_ape_linbo3_global_material(
+    const Mesh& mesh,
+    const ApeLinbo3Profile& profile) {
+    validate_ape_linbo3_profile(profile);
+
+    GlobalNodalMaterialFields fields;
+    // The APE model varies spatially and should ultimately activate derivative
+    // terms. This sanity implementation keeps them disabled so the current
+    // dense solver path remains comparable to the other point checks.
+    fields.delta_x = false;
+    fields.delta_z = false;
+    fields.homogeneous = false;
+    fields.isotropic = false;
+    fields.model_label = "ape_linbo3_anisotropic_sanity";
+
+    for (const MeshNode& node : mesh.nodes) {
+        double nx2 = square(profile.cover_index);
+        double nz2 = square(profile.cover_index);
+        if (node.point.y >= profile.surface_y) {
+            const double extraordinary_index =
+                evaluate_ape_linbo3_extraordinary_index(node.point, profile);
+            nx2 = square(extraordinary_index);
+            nz2 = square(profile.ordinary_index);
+        }
+        fields.nx2_by_node_id.emplace(node.id, nx2);
+        fields.nz2_by_node_id.emplace(node.id, nz2);
+        fields.gz2_by_node_id.emplace(node.id, 1.0 / nz2);
+    }
+
+    return fields;
+}
+
+GlobalNodalMaterialFields make_ti_diffused_linbo3_global_material(
+    const Mesh& mesh,
+    const TiDiffusedLinbo3Profile& profile) {
+    validate_ti_diffused_linbo3_profile(profile);
+
+    GlobalNodalMaterialFields fields;
+    // Eqs. (11)-(12) vary in x and y. Derivative terms are intentionally
+    // disabled until the non-symmetric path is audited for the final sweeps.
+    fields.delta_x = false;
+    fields.delta_z = false;
+    fields.homogeneous = false;
+    fields.isotropic = false;
+    fields.model_label = "ti_diffused_linbo3_anisotropic";
+
+    for (const MeshNode& node : mesh.nodes) {
+        const double nx2 =
+            evaluate_ti_diffused_linbo3_extraordinary_index_squared(node.point, profile);
+        const double nz2 =
+            evaluate_ti_diffused_linbo3_ordinary_index_squared(node.point, profile);
+        fields.nx2_by_node_id.emplace(node.id, nx2);
+        fields.nz2_by_node_id.emplace(node.id, nz2);
+        fields.gz2_by_node_id.emplace(node.id, 1.0 / nz2);
     }
 
     return fields;
