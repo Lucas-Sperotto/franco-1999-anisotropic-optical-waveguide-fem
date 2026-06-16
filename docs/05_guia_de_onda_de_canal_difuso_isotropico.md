@@ -60,7 +60,7 @@ Esse primeiro caso de canal difuso isotrópico é particularmente útil para est
 
 O perfil circular foi implementado em `src/material_profile.cpp` e testado via `cases/channel_diffused_isotropic_case.yaml` com a malha `channel_a2b_b1_reference.mesh` (304 nós, 540 elementos).
 
-**Auditoria T-005 — flags delta_x/delta_z:** `docs/02` §3 afirma explicitamente que F2, F3 e F4 são não-simétricas ("esparsas e não simétricas devido à presença de termos com $dn^2/d\zeta$") quando os flags estão ativos. Os flags permanecem `false` nos perfis 2D até a rota não simétrica ser auditada para os sweeps finais.
+**Auditoria T-005 — flags delta_x/delta_z:** `docs/02` §3 afirma explicitamente que F2, F3 e F4 são não-simétricas ("esparsas e não simétricas devido à presença de termos com $dn^2/d\zeta$") quando os flags estão ativos. No perfil circular deste Caso 3, os flags permanecem `false` até uma auditoria específica da ativação dos gradientes nessa geometria.
 
 **Sweep de reprodução (15 pontos, V = 1.5..5.0):** executado com `scripts/run_case3_channel_diffused_sweep.py`. Com delta_x/delta_z desativados, o solver subestima os efeitos de gradiente, resultando em neff > n3av em todos os pontos e B > 1 (acima do limite da Fig. 4). A curva calculada é uma **aproximação inferior** do modelo completo: indica guiamento, mas superestima o confinamento.
 
@@ -121,7 +121,18 @@ com $n_1 = 1.0$, $n_2 = (2.1)^{1/2}$ e $n_{3m} = 1.05\,n_2$.
 
 Além disso, deve-se observar na Fig. 5 que a formulação escalar utilizada neste trabalho reproduz muito bem os resultados obtidos por outros métodos, a saber: o Método Variacional (VM) [3], os Métodos Vetorial por Elementos Finitos (Vector FE) [10] e Vetorial por Diferenças Finitas (VFD) [4], o Método Vetorial por Diferenças Finitas Estendido [12] e o Método Variacional por Diferenças Finitas (Var. FD) [5]. Para uma região próxima ao corte, os resultados mostrados na Fig. 5 estão em boa concordância com os resultados apresentados em [3], que também utiliza uma malha refinada na região de interesse.
 
-> Observação editorial atualizada: a definição de $f(x,y)$ foi recuperada da legenda da Fig. 4 da referência [12], que é reutilizada pelas Figs. 5-7 dessa mesma referência. A implementação inicial do Caso 4 ainda mantém os termos de gradiente `delta_x/delta_z` desativados pelo mesmo bloqueio T-005 do Caso 3, até existir eigensolver generalizado não simétrico.
+### Reprodução computacional do Caso 4 (2026-06-16)
+
+A definição de $f(x,y)$ foi recuperada da legenda da Fig. 4 da referência [12], que é reutilizada pelas figuras Gaussian-Gaussian dessa referência. O perfil foi implementado como `channel_diffused_isotropic_gaussian_gaussian`, usando `surface_y` como origem em profundidade e `n_1` na cobertura.
+
+O sweep da Fig. 5 é automatizado por `scripts/run_case4_gaussian_gaussian_sweep.py`, consolidado por `scripts/consolidate_case4_gaussian_gaussian_sweep.py` e plotado por `scripts/plot_case4_gaussian_gaussian_sweep.py`. Os termos `delta_x/delta_z` estão ativos nesse perfil; o autoproblema reduzido segue a rota não simétrica `general_nonsym_refined`.
+
+**Artefatos finais:**
+
+- CSV: `out/case4_gaussian_gaussian/final_run/consolidated/dispersion_curve.csv`
+- SVG: `out/case4_gaussian_gaussian/final_run/plots/fig5_like_reference.svg`
+
+O sweep final contém 17 valores de `V` e 51 pares modo/`V` após a filtragem de modos guiados. O modo principal cresce monotonicamente de `B = 0.021` em `V = 1.0` até `B = 0.597` em `V = 5.0`. A limitação restante é a comparação quantitativa com curvas digitizadas do artigo/referências, ainda não anexada ao pipeline.
 
 Os dois exemplos desta seção correspondem aos **Casos 3 e 4** sintetizados em [09_resumo_dos_casos_de_teste.md](09_resumo_dos_casos_de_teste.md). Em conjunto, eles encerram a etapa isotrópica da validação e preparam a passagem para os materiais anisotrópicos em [06_guia_de_onda_de_canal_difuso_anisotropico.md](06_guia_de_onda_de_canal_difuso_anisotropico.md).
 

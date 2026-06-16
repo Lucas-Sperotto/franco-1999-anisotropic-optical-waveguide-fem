@@ -347,9 +347,9 @@ $$
 ## Pontos que merecem conferência manual no momento da codificação
 
 - o termo $[F_4]$ da formulação em [02](02_formulacao_por_elementos_finitos.md), por ser uma região sensível a ambiguidades tipográficas em documentos escaneados;
-- a validação por sweep e figura do Caso 4, agora que a definição explícita de $f(x,y)$ foi recuperada da referência [12];
-- a substituição temporária do pré-processador de concentração APE por uma concentração proxy explícita no Caso 5;
-- a extração dos tamanhos de modo $W_x$ e $W_y$ para o sweep final do Caso 6;
+- a comparação quantitativa do Caso 4 contra curvas digitizadas, agora que o sweep e a figura já existem;
+- a substituição futura da aproximação Gaussian-Gaussian de concentração APE por uma solução FEM 2D de difusão, se a reprodução exigir esse grau de fidelidade;
+- a sensibilidade dos tamanhos de modo $W_x$ e $W_y$ à malha e ao método de FWHM no Caso 6;
 - a parametrização geométrica associada à dimensão $b$ no Caso 1, que depende da leitura da figura original.
 
 ## Estado atual de reprodução (2026-06-16)
@@ -361,20 +361,18 @@ Esta seção registra o estado real de implementação e validação de cada cas
 | 1 — canal homogêneo isotrópico | Fig. 1 | PARCIAL | **T-004 concluído (2026-06-15):** guia de superfície assimétrico confirmado (n₁=1.00 ar acima, n₂=1.43 substrato abaixo/laterais). YAML `cover_index=1.00` correto sem alteração. Sweep smoke: B=0.502/0.735/0.910 em V=1.2/2.0/4.0. Discrepância em V=1.2 explicada: pontos de referência extraídos da curva Marcatili/EIM (curvas inferiores na Fig. 1), não da curva FEM "This work" do artigo. |
 | 2 — planar difuso isotrópico | Fig. 2 | COMPLETO | CSV, SVG e comparação analítica (erro máximo 0,0017%). Regressão ativa no CTest. |
 | 3 — canal circular difuso isotrópico | Fig. 4 | PARCIAL | Sweep, CSV e SVG existem. **T-005 concluído:** flags `delta_x`/`delta_z` permanecem `false` — a ativação dos termos de gradiente ainda precisa ser auditada na rota não simétrica antes da validação final. |
-| 4 — canal Gaussian-Gaussian | Fig. 5 | PARCIAL | **T-007/T-008 concluídos:** `f(x,y)=exp[-4(x-x0)^2/a^2]·exp[-(y/b)^2]` verificada na referência [12], perfil C++ e YAML pontual implementados. Falta sweep/consolidação/figura; `delta_x/delta_z` seguem bloqueados por T-005. |
-| 5 — APE LiNbO₃ | Fig. 6 | PARCIAL | **T-011 concluído (2026-06-16):** perfil anisotrópico de sanidade `ape_linbo3_anisotropic_sanity`, YAML `cases/case5_ape_linbo3.yaml`, CTest smoke e CSV pontual existem. Limitação: `C(x,y)` usa concentração proxy; falta pré-processador de difusão APE e sweep dos 4 modos. |
-| 6 — Ti:LiNbO₃ | Fig. 7 | PARCIAL | **T-012 concluído (2026-06-16):** perfil `ti_diffused_linbo3_anisotropic` implementa Eqs. 11-12 com parâmetros ordinário/extraordinário separados, YAML `cases/case6_ti_linbo3.yaml`, CTest smoke e CSV pontual existem. Falta sweep em `W`, extração de `W_x/W_y` e figura. |
+| 4 — canal Gaussian-Gaussian | Fig. 5 | PARCIAL | `f(x,y)=exp[-4(x-x0)^2/a^2]·exp[-(y/b)^2]` foi verificada na referência [12]. O sweep final tem 17 valores de `V`, 51 pares modo/`V`, CSV e SVG em `out/case4_gaussian_gaussian/final_run/`. `delta_x/delta_z` estão ativos; falta comparação quantitativa com curvas digitizadas. |
+| 5 — APE LiNbO₃ | Fig. 6 | PARCIAL | O sweep final tem 15 tempos de recozimento, 60 linhas consolidadas, CSV e SVG em `out/case5_ape_linbo3/final_run/`. `delta_x/delta_z` estão ativos. Limitação: `C(x,y)` ainda é proxy Gaussian-Gaussian derivada das constantes de difusão, não solução FEM 2D de difusão APE. |
+| 6 — Ti:LiNbO₃ | Fig. 7 | PARCIAL | O sweep final tem 18 valores de `W`, extração de `W_x/W_y`, CSV e SVG em `out/case6_ti_linbo3/final_run/`. `delta_x/delta_z` estão ativos. Limitação: tamanhos de modo são extraídos por FWHM de `modal_fields.csv` e permanecem sensíveis à malha. |
 
-**Resumo:** 1 caso completo (Caso 2), 5 parciais (Casos 1, 3, 4, 5 e 6), 0 faltando na camada de execução pontual.
+**Resumo:** 1 caso completo (Caso 2), 5 parciais com execução e artefatos reproduzíveis (Casos 1, 3, 4, 5 e 6), 0 casos sem pipeline mínimo.
 
 **Próximas ações:**
 
-- Caso 1: executar sweep completo com a malha de referência (`channel_a2b_b1_reference.mesh`) para regenerar artefatos finais (T-013).
-- Caso 2: fixar artefatos finais em `out/planar_diffuse_sweep/final_run/` (T-014).
 - Caso 3: auditar a rota não simétrica para ativar termos de gradiente.
-- Caso 4: criar sweep, consolidação e figura da Fig. 5 a partir do perfil Gaussian-Gaussian já implementado.
-- Caso 5: implementar ou importar o pré-processador de concentração APE para substituir a concentração proxy.
-- Caso 6: criar sweep em largura `W`, calcular `W_x/W_y` e gerar a Fig. 7.
+- Casos 4-6: anexar referências digitizadas/overlays e quantificar discrepâncias.
+- Caso 5: implementar ou importar um pré-processador FEM 2D de concentração APE se a comparação exigir fidelidade além da proxy Gaussian.
+- Caso 6: estudar convergência de malha para `W_x/W_y`.
 
 ---
 

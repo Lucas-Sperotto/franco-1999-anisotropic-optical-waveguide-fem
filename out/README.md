@@ -48,21 +48,19 @@ As saídas finais atualmente reprodutíveis ficam nestas pastas fixas:
 - `out/case1_homogeneous_channel/final_run/`
 - `out/planar_diffuse_sweep/final_run/`
 - `out/case3_channel_diffused_isotropic/final_run/`
-- `out/case4_gaussian_gaussian_channel/final_point/`
-- `out/case5_ape_linbo3/final_point/`
-- `out/case6_ti_linbo3/final_point/`
+- `out/case4_gaussian_gaussian/final_run/`
+- `out/case5_ape_linbo3/final_run/`
+- `out/case6_ti_linbo3/final_run/`
 
 Essas pastas são as fontes preferenciais para relatórios e conferência
-externa. Cada uma deve conter os manifests do sweep, os YAMLs gerados, os
-CSV consolidados em `consolidated/` e as figuras em `plots/`, quando se tratar
-de sweep. Os Casos 4, 5 e 6 ainda são execuções pontuais de sanidade, portanto
-seus artefatos ficam diretamente em `results/`.
+externa. Cada uma deve conter os manifests ou pontos gerados, os YAMLs de
+execução, os CSV consolidados em `consolidated/` e as figuras em `plots/`
+quando aplicável.
 
 As demais pastas em `out/` são execuções exploratórias, auditorias pontuais,
 testes de hipótese ou entregas históricas. Elas não devem ser apagadas sem
 decisão explícita, porque podem estar referenciadas em relatórios anteriores,
-mas também não são necessárias para reproduzir o estado final dos Casos 1, 2,
-3 e os pontos de sanidade dos Casos 4, 5 e 6.
+mas também não são necessárias para reproduzir o estado final dos Casos 1 a 6.
 
 O fluxo orquestrado atual é:
 

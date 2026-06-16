@@ -2,7 +2,7 @@
 
 Esta pasta documenta a estratégia atual de testes.
 
-Nesta fase, o projeto já expõe vinte e nove testes simples via CTest. A forma reprodutível recomendada, a partir da raiz do repositório, é:
+Nesta fase, o projeto já expõe quarenta e um testes via CTest. A forma reprodutível recomendada, a partir da raiz do repositório, é:
 
 ```bash
 ./scripts/test.sh
@@ -18,8 +18,8 @@ Testes registrados:
 - `waveguide_solver_case1_smoke`: garante a execução completa do caso homogêneo de canal isotrópico em degrau;
 - `waveguide_solver_case3_smoke`: garante a execução pontual do caso de canal difuso isotrópico circular;
 - `waveguide_solver_case4_smoke`: garante a execução pontual do caso de canal difuso isotrópico Gaussian-Gaussian;
-- `waveguide_solver_case5_smoke`: garante a execução pontual do caso APE LiNbO3 anisotrópico de sanidade;
-- `waveguide_solver_case6_smoke`: garante a execução pontual do caso Ti:LiNbO3 anisotrópico de sanidade;
+- `waveguide_solver_case5_smoke`: garante a execução pontual do caso APE LiNbO3 anisotrópico;
+- `waveguide_solver_case6_smoke`: garante a execução pontual do caso Ti:LiNbO3 anisotrópico;
 - `waveguide_solver_smoke_artifacts`: garante que a execução smoke produziu os artefatos globais esperados em `out/`;
 - `waveguide_solver_planar_smoke_artifacts`: garante que o caso planar difuso exportou os artefatos numéricos esperados, já com cobertura `n0 = 1`, redução `x`-invariante e perfil material alinhado ao benchmark do artigo [6-19];
 - `waveguide_solver_case1_smoke_artifacts`: garante que o caso base do guia de canal isotrópico exportou os artefatos numéricos globais esperados;
@@ -41,5 +41,8 @@ Testes registrados:
 - `waveguide_case3_sweep_consolidate`: consolida os pontos do sweep do Caso 3 nas grandezas normalizadas da Fig. 4.
 - `waveguide_case3_sweep_plot`: gera o gráfico SVG do Caso 3 com a nota de limitação T-005.
 - `waveguide_case3_sweep_artifacts`: garante a presença do CSV consolidado, do resumo de limitação e do SVG do Caso 3, além dos pontos `V=2.0` e `V=4.0` no smoke.
+- `waveguide_case4_sweep_smoke`, `waveguide_case4_sweep_consolidate`, `waveguide_case4_sweep_plot` e `waveguide_case4_sweep_artifacts`: executam, consolidam, plotam e verificam o sweep reduzido do Caso 4/Fig. 5.
+- `waveguide_case5_sweep_smoke`, `waveguide_case5_sweep_consolidate`, `waveguide_case5_sweep_plot` e `waveguide_case5_sweep_artifacts`: executam, consolidam, plotam e verificam o sweep reduzido do Caso 5/Fig. 6.
+- `waveguide_case6_sweep_smoke`, `waveguide_case6_sweep_consolidate`, `waveguide_case6_sweep_plot` e `waveguide_case6_sweep_artifacts`: executam, consolidam, plotam e verificam o sweep reduzido do Caso 6/Fig. 7, incluindo `W_x/W_y`.
 
-Esses testes agora cobrem a base geométrica, a camada de coeficientes materiais P1, a montagem local geral, a montagem global mínima, o primeiro caso global com perfil isotrópico planar difuso, o primeiro caso global de canal homogêneo em degrau, as execuções pontuais dos Casos 3, 4, 5 e 6 e a automação reproduzível dos sweeps dos Casos 1, 2 e 3.
+Esses testes agora cobrem a base geométrica, a camada de coeficientes materiais P1, a montagem local geral, a montagem global mínima, os casos globais implementados e a automação reproduzível dos sweeps dos Casos 1, 2, 3, 4, 5 e 6.

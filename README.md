@@ -7,10 +7,10 @@ Repositório em C++ para reproduzir o artigo “Finite Element Analysis of Aniso
 | --- | --- | --- |
 | Fig. 1 | Canal homogêneo isotrópico | Parcial: CSV/figura existem; discrepância residual documentada contra referência visual Marcatili/EIM |
 | Fig. 2 | Planar difuso isotrópico | PASS: comparação analítica com erro máximo abaixo de 0.002% |
-| Fig. 4 | Canal difuso circular isotrópico | Parcial: sweep/figura existem; `delta_x/delta_z` aguardam auditoria da rota não simétrica |
-| Fig. 5 | Canal Gaussian-Gaussian isotrópico | Parcial: perfil, YAML e ponto de sanidade implementados; sweep/figura pendentes |
-| Fig. 6 | APE LiNbO3 | Parcial: perfil anisotrópico de sanidade, YAML e ponto com 4 modos implementados; falta pré-processador de concentração e figura |
-| Fig. 7 | Ti:LiNbO3 | Parcial: perfil anisotrópico com ramos ordinário/extraordinário separados e ponto implementado; falta sweep em `W`, `W_x/W_y` e figura |
+| Fig. 4 | Canal difuso circular isotrópico | Parcial: sweep/figura existem; `delta_x/delta_z` seguem desativados neste perfil até auditoria específica |
+| Fig. 5 | Canal Gaussian-Gaussian isotrópico | Parcial: sweep, CSV e SVG existem; falta comparação quantitativa com referência digitizada |
+| Fig. 6 | APE LiNbO3 | Parcial: sweep de 4 modos, CSV e SVG existem; concentração ainda é proxy Gaussian derivada das constantes de difusão |
+| Fig. 7 | Ti:LiNbO3 | Parcial: sweep em `W`, `W_x/W_y`, CSV e SVG existem; tamanhos de modo ainda são extração FWHM sensível à malha |
 
 ## Build e testes
 
@@ -19,7 +19,7 @@ Repositório em C++ para reproduzir o artigo “Finite Element Analysis of Aniso
 ./scripts/test.sh
 ```
 
-O script de testes chama `/usr/bin/ctest --test-dir build --output-on-failure` diretamente. Isso evita o wrapper `ctest` do ambiente local em `~/.local/bin`, que pode falhar antes de executar a suíte. A suíte atual expõe 29 testes CTest.
+O script de testes chama `/usr/bin/ctest --test-dir build --output-on-failure` diretamente. Isso evita o wrapper `ctest` do ambiente local em `~/.local/bin`, que pode falhar antes de executar a suíte. A suíte atual expõe 41 testes CTest.
 
 ## Reprodução
 
@@ -50,8 +50,8 @@ bash scripts/run_case.sh cases/case6_ti_linbo3.yaml audit_case6
 - `out/case1_homogeneous_channel/final_run/`
 - `out/planar_diffuse_sweep/final_run/`
 - `out/case3_channel_diffused_isotropic/final_run/`
-- `out/case4_gaussian_gaussian_channel/final_point/` ou `out/case4_gaussian_gaussian_channel/audit_case4/`
-- `out/case5_ape_linbo3/final_point/` ou `out/case5_ape_linbo3/audit_case5/`
-- `out/case6_ti_linbo3/final_point/` ou `out/case6_ti_linbo3/audit_case6/`
+- `out/case4_gaussian_gaussian/final_run/`
+- `out/case5_ape_linbo3/final_run/`
+- `out/case6_ti_linbo3/final_run/`
 
 O manifesto `out/reproduction_artifacts.csv` é gerado por `scripts/plot_all.py`.

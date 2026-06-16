@@ -32,7 +32,7 @@ Do ponto de vista didático, este é o primeiro caso em que o leitor precisa aco
 
 ### Estado de implementação do Caso 5
 
-O repositório já possui um ponto de sanidade para este caso em `cases/case5_ape_linbo3.yaml`, com o modelo `ape_linbo3_anisotropic_sanity`.
+O repositório possui um caso-base para este exemplo em `cases/case5_ape_linbo3.yaml`, com o modelo `ape_linbo3_anisotropic_sanity`.
 
 A implementação usa a relação índice-concentração da Eq. (10) para o ramo extraordinário, mapeado para `n_x` na formulação escalar atual, e mantém `n_z` como ramo ordinário constante. Como o artigo informa que a concentração $C(x,y)$ vem de uma solução separada da equação de difusão anisotrópica 2D, o ponto atual **não** tenta reproduzir essa etapa por palpite. Em vez disso, usa uma concentração proxy explícita:
 
@@ -42,9 +42,16 @@ C(x,y) = C_\mathrm{peak}
 \,\exp\left[-\frac{(y-y_s)^2}{d_y^2}\right],
 $$
 
-aplicada apenas no substrato. Essa escolha serve para exercitar o contrato anisotrópico, o parser, a montagem global e a exportação de CSVs. A reprodução final da Fig. 6 ainda exige implementar ou importar o pré-processamento de difusão APE que gera $C(x,y)$.
+aplicada apenas no substrato. O script `scripts/ape_diffusion_preprocessor.py` calcula os parâmetros dessa aproximação a partir das constantes de difusão informadas na Fig. 6 (`D_a(x-cut)=0.92 um^2/h`, `D_a(z-cut)=0.77 um^2/h`) e do tempo de recozimento. Essa escolha exercita o contrato anisotrópico, o parser, a montagem global e a exportação de CSVs sem inventar uma solução FEM 2D de difusão.
 
-> Observação editorial: no código, os termos de gradiente `delta_x` e `delta_z` permanecem desativados para este ponto de sanidade até a rota não simétrica ser auditada nas varreduras finais.
+O sweep da Fig. 6 é automatizado por `scripts/run_case5_ape_linbo3_sweep.py`, consolidado por `scripts/consolidate_case5_ape_linbo3_sweep.py` e plotado por `scripts/plot_case5_ape_linbo3_sweep.py`. Os termos `delta_x/delta_z` estão ativos nesse perfil; o autoproblema reduzido usa a rota não simétrica `general_nonsym_refined`.
+
+**Artefatos finais:**
+
+- CSV: `out/case5_ape_linbo3/final_run/consolidated/dispersion_curve.csv`
+- SVG: `out/case5_ape_linbo3/final_run/plots/fig6_like_reference.svg`
+
+O sweep final contém 15 tempos de recozimento e 60 linhas consolidadas (4 modos por ponto). A limitação restante é física: `C(x,y)` ainda é uma aproximação Gaussian-Gaussian derivada das constantes de difusão, não a solução FEM 2D de difusão anisotrópica descrita no artigo.
 
 ## B. Guia de onda Ti-difundido em $LiNbO_3$
 
@@ -137,16 +144,23 @@ Uma observação importante para a implementação é que as expressões (11)-(1
 
 ### Estado de implementação do Caso 6
 
-O repositório já possui um ponto de sanidade para este caso em `cases/case6_ti_linbo3.yaml`, com o modelo `ti_diffused_linbo3_anisotropic`.
+O repositório possui um caso-base para este exemplo em `cases/case6_ti_linbo3.yaml`, com o modelo `ti_diffused_linbo3_anisotropic`.
 
 A implementação usa diretamente as Eqs. (11)-(12), com conjuntos separados de parâmetros para os ramos extraordinário e ordinário. A convenção adotada para o ponto atual é:
 
 - `n_x`: ramo extraordinário;
 - `n_z`: ramo ordinário;
 - `g_z^2 = 1/n_z^2`;
-- `W = 7.0 um` no ponto de sanidade.
+- `W = 7.0 um` no YAML-base.
 
-Os valores derivados $\Delta n_{se}=0.00446$ e $\Delta n_{so}=0.01217$ são lidos do YAML como parâmetros de entrada, conforme a tabela consolidada em [09_resumo_dos_casos_de_teste.md](09_resumo_dos_casos_de_teste.md). A reprodução final da Fig. 7 ainda exige varrer `W`, extrair os tamanhos de modo `W_x` e `W_y` e gerar o gráfico comparável à figura do artigo.
+Os valores derivados $\Delta n_{se}=0.00446$ e $\Delta n_{so}=0.01217$ são lidos do YAML como parâmetros de entrada, conforme a tabela consolidada em [09_resumo_dos_casos_de_teste.md](09_resumo_dos_casos_de_teste.md). O sweep em `W` é automatizado por `scripts/run_case6_ti_linbo3_sweep.py`; a consolidação extrai `W_x` e `W_y` por FWHM de `|E|^2` em `scripts/consolidate_case6_ti_linbo3_sweep.py`; e o SVG é gerado por `scripts/plot_case6_ti_linbo3_sweep.py`.
+
+**Artefatos finais:**
+
+- CSV: `out/case6_ti_linbo3/final_run/consolidated/neff_mode_sizes.csv`
+- SVG: `out/case6_ti_linbo3/final_run/plots/fig7_like_reference.svg`
+
+O sweep final contém 18 valores de `W` entre 3 e 12 um. A limitação restante é a sensibilidade de `W_x/W_y` à malha e ao método de extração por FWHM a partir de `modal_fields.csv`; portanto, a figura atual é uma reprodução operacional, não uma validação quantitativa final contra curvas digitizadas.
 
 Os exemplos desta seção correspondem aos **Casos 5 e 6** sintetizados em [09_resumo_dos_casos_de_teste.md](09_resumo_dos_casos_de_teste.md) e fecham a sequência de validação física do artigo antes das conclusões em [07_conclusoes.md](07_conclusoes.md).
 

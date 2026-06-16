@@ -1,6 +1,6 @@
 # Resultados da Reprodução — Franco et al. (1999)
 
-**Data:** 2026-06-15
+**Data:** 2026-06-16
 **Repositório:** `franco-1999-anisotropic-optical-waveguide-fem`
 
 ---
@@ -41,7 +41,9 @@ Após discretização com elementos triangulares P1 lineares, obtém-se:
 [F]{Ex} = neff² [M]{Ex}
 ```
 
-onde `neff = β/k0`. As matrizes `[F]` e `[M]` são construídas pela soma das contribuições locais de cada elemento triangular. A formulação inclui quatro termos de rigidez (F1, F2, F3, F4) que acomodam gradientes de material e anisotropia via flags δx e δz. O eigensolver usa fatoração de Cholesky de `[M]` seguida de diagonalização de Jacobi para matrizes simétricas.
+onde `neff = β/k0`. As matrizes `[F]` e `[M]` são construídas pela soma das contribuições locais de cada elemento triangular. A formulação inclui quatro termos de rigidez (F1, F2, F3, F4) que acomodam gradientes de material e anisotropia via flags δx e δz.
+
+O eigensolver usa fatoração de Cholesky de `[M]` seguida de diagonalização de Jacobi para matrizes simétricas. Para matrizes reduzidas não simétricas, a rota atual é `general_nonsym_refined`: estimativa inicial por simetrização/Jacobi, iteração inversa no operador não simétrico e refinamento por quociente de Rayleigh.
 
 ### 3.3 Material anisotrópico
 
@@ -209,7 +211,7 @@ python3 scripts/plot_case3_channel_diffused_sweep.py \
 **Status: PARTIAL**
 
 **Limitações conhecidas (T-005 concluído):**
-1. `delta_x = false` e `delta_z = false` em `src/material_profile.cpp` — os termos de gradiente F2-gradiente e F4 não são computados. Isso é um BLOCKER documentado: ativar esses flags torna F não-simétrica (conforme docs/02 §3b). A rota não simétrica atual ainda precisa ser auditada para os sweeps finais antes de reativar os termos de gradiente.
+1. `delta_x = false` e `delta_z = false` permanecem no perfil circular do Caso 3. Os termos de gradiente F2/F4 não são computados nesse caso específico até uma auditoria própria da ativação dos gradientes nessa geometria.
 2. Com delta_x/delta_z desativados, neff > n3av em todos os pontos, resultando em B > 1. A curva do artigo (Fig. 4) mostra B < 1, indicando que os termos de gradiente são necessários para confinamento correto. A curva atual é uma aproximação inferior do modelo completo.
 3. O SVG inclui nota de limitação T-005 visível e eixo B estendido até 1.5.
 
@@ -225,17 +227,26 @@ A referência [12] foi adicionada em `docs/ref/[12] - sbmo.1993.587213.pdf` e a 
 f(x,y) = exp[-4(x-x0)^2/a^2] * exp[-(y/b)^2]
 ```
 
-Foi implementado um ponto de sanidade do perfil Gaussian-Gaussian isotrópico:
+O sweep final usa `n2 = sqrt(2.1)`, `n3m = 1.05 n2`, `b = 1 um` e varia `V = 1.0..5.0`.
+
+**Comandos:**
 
 ```bash
-bash scripts/run_case.sh cases/case4_gaussian_gaussian_channel.yaml audit_case4
+python3 scripts/run_case4_gaussian_gaussian_sweep.py \
+  --output-root out/case4_gaussian_gaussian/final_run
+python3 scripts/consolidate_case4_gaussian_gaussian_sweep.py \
+  --sweep-root out/case4_gaussian_gaussian/final_run
+python3 scripts/plot_case4_gaussian_gaussian_sweep.py \
+  --sweep-root out/case4_gaussian_gaussian/final_run
 ```
 
-**CSV gerado:** `out/case4_gaussian_gaussian_channel/audit_case4/results/neff.csv`
+**CSV gerado:** `out/case4_gaussian_gaussian/final_run/consolidated/dispersion_curve.csv`
 
-**Resultado pontual:** modo líder com `n_eff = 1.493103`, entre `n2 = sqrt(2.1)` e `n3m = 1.05 n2`.
+**Figura gerada:** `out/case4_gaussian_gaussian/final_run/plots/fig5_like_reference.svg`
 
-**Limitação:** ainda não há sweep/consolidação/figura para a Fig. 5. Como no Caso 3, `delta_x/delta_z` permanecem desativados até existir eigensolver generalizado não simétrico.
+**Resultado:** 17 valores de `V` e 51 pares modo/`V` consolidados. O modo principal cresce de `B = 0.021` em `V = 1.0` para `B = 0.597` em `V = 5.0`. Os termos `delta_x/delta_z` estão ativos e usam a rota `general_nonsym_refined`.
+
+**Limitação:** a figura é operacional, mas ainda não possui overlay de curvas digitizadas do artigo/referências.
 
 ---
 
@@ -245,17 +256,26 @@ bash scripts/run_case.sh cases/case4_gaussian_gaussian_channel.yaml audit_case4
 
 O perfil APE envolve difusão anisotrópica 2D cuja concentração C(x,y) varia segundo uma equação de difusão anisotrópica resolvida em pré-processamento. A equação de índice em função de C está documentada em `docs/06` (Eq. 10).
 
-Foi implementado um ponto de sanidade anisotrópico:
+O pipeline atual usa `scripts/ape_diffusion_preprocessor.py` para calcular uma aproximação Gaussian-Gaussian a partir das constantes de difusão do recozimento (`Da_x = 0.92`, `Da_z = 0.77 um^2/h`), sem afirmar que isso substitui a solução FEM 2D de difusão descrita no artigo.
+
+**Comandos:**
 
 ```bash
-bash scripts/run_case.sh cases/case5_ape_linbo3.yaml audit_case5
+python3 scripts/run_case5_ape_linbo3_sweep.py \
+  --output-root out/case5_ape_linbo3/final_run
+python3 scripts/consolidate_case5_ape_linbo3_sweep.py \
+  --sweep-root out/case5_ape_linbo3/final_run
+python3 scripts/plot_case5_ape_linbo3_sweep.py \
+  --sweep-root out/case5_ape_linbo3/final_run
 ```
 
-**CSV gerado:** `out/case5_ape_linbo3/audit_case5/results/neff.csv`
+**CSV gerado:** `out/case5_ape_linbo3/final_run/consolidated/dispersion_curve.csv`
 
-**Resultado pontual:** quatro modos exportados; modo líder com `n_eff = 2.207327`.
+**Figura gerada:** `out/case5_ape_linbo3/final_run/plots/fig6_like_reference.svg`
 
-**Limitação:** a concentração C(x,y) ainda não é produzida por um pré-processador FEM de difusão anisotrópica. O YAML usa uma concentração proxy Gaussian-Gaussian explícita apenas para exercitar o contrato material, a montagem e a exportação. Portanto, este ponto não deve ser interpretado como reprodução final da Fig. 6.
+**Resultado:** 15 tempos de recozimento, 60 linhas consolidadas (4 modos por ponto) e modo principal monotônico de `B = 0.872` até `B = 0.990`. Os termos `delta_x/delta_z` estão ativos.
+
+**Limitação:** `C(x,y)` ainda é uma proxy Gaussian derivada dos parâmetros de difusão, não um mapa obtido por solver FEM 2D de difusão APE.
 
 ---
 
@@ -265,17 +285,24 @@ bash scripts/run_case.sh cases/case5_ape_linbo3.yaml audit_case5
 
 O perfil Ti:LiNbO3 envolve perfis anisotrópicos com parâmetros distintos para os ramos extraordinário e ordinário (Eqs. 11–13, documentadas em `docs/06`).
 
-Foi implementado um ponto de sanidade com `W = 7.0 um`:
+**Comandos:**
 
 ```bash
-bash scripts/run_case.sh cases/case6_ti_linbo3.yaml audit_case6
+python3 scripts/run_case6_ti_linbo3_sweep.py \
+  --output-root out/case6_ti_linbo3/final_run
+python3 scripts/consolidate_case6_ti_linbo3_sweep.py \
+  --sweep-root out/case6_ti_linbo3/final_run
+python3 scripts/plot_case6_ti_linbo3_sweep.py \
+  --sweep-root out/case6_ti_linbo3/final_run
 ```
 
-**CSV gerado:** `out/case6_ti_linbo3/audit_case6/results/neff.csv`
+**CSV gerado:** `out/case6_ti_linbo3/final_run/consolidated/neff_mode_sizes.csv`
 
-**Resultado pontual:** modo líder com `n_eff = 2.210077`.
+**Figura gerada:** `out/case6_ti_linbo3/final_run/plots/fig7_like_reference.svg`
 
-**Limitação:** a implementação atual executa apenas um ponto, separando os ramos extraordinário (`n_x`) e ordinário (`n_z`) no CSV nodal. Ainda faltam sweep em `W`, extração dos tamanhos de modo `W_x` e `W_y` e figura comparável à Fig. 7.
+**Resultado:** 18 valores de `W` entre 3 e 12 um. O índice efetivo cresce de `2.209083` para `2.210542`; `W_x` fica na faixa aproximada `4.70..4.76 um`; `W_y` decresce de `4.2886` para `4.1350 um`. Os termos `delta_x/delta_z` estão ativos.
+
+**Limitação:** `W_x/W_y` são extraídos de `modal_fields.csv` por FWHM de `|E|^2`, com sensibilidade esperada à malha e ao método de interpolação.
 
 ---
 
@@ -285,10 +312,10 @@ bash scripts/run_case.sh cases/case6_ti_linbo3.yaml audit_case6
 |---|---|---|---|---|---|---|
 | Fig. 1 | Canal homogêneo | Sim (34 pts) | Sim (SVG) | 4 testes sweep | **PARTIAL** | T-004: geometria surface assimétrica confirmada; B=0.571 em V=1.2 vs referência 0.350 (Marcatili/EIM); B=0.910 em V=4.0 (~0% erro) |
 | Fig. 2 | Planar difuso | Sim | Sim (SVG) | 4 testes sweep | **PASS** | Erro máx. 0.0017% vs. solução exata. Artefatos em `final_run/` |
-| Fig. 4 | Canal circular | Sim (15 pts) | Sim (SVG) | smoke + global_tests | **PARTIAL** | T-005: flags delta_x/delta_z bloqueados (F não-simétrica); B > 1 em todos os pontos; curva é aproximação com gradientes omitidos. Falta auditar a rota não simétrica para os sweeps finais |
-| Fig. 5 | Gaussian-Gaussian | Sim (ponto) | Não | smoke + global_tests | **PARTIAL** | T-007/T-008: fórmula verificada na ref. [12], perfil C++ e YAML pontual implementados; falta sweep/figura e eigensolver não simétrico para delta_x/delta_z |
-| Fig. 6 | APE LiNbO3 | Sim (ponto) | Não | smoke + global_tests | **PARTIAL** | T-011: perfil APE de sanidade, YAML e CSV pontual implementados; falta concentração FEM de difusão e sweep/figura |
-| Fig. 7 | Ti:LiNbO3 | Sim (ponto) | Não | smoke + global_tests | **PARTIAL** | T-012: perfil Ti com ramos ordinário/extraordinário separados e CSV pontual; falta sweep em W, W_x/W_y e figura |
+| Fig. 4 | Canal circular | Sim (15 pts) | Sim (SVG) | 4 testes sweep | **PARTIAL** | Perfil circular ainda mantém `delta_x/delta_z=false`; B > 1 em parte da curva; falta auditoria específica dos gradientes |
+| Fig. 5 | Gaussian-Gaussian | Sim (51 linhas) | Sim (SVG) | 4 testes sweep | **PARTIAL** | Sweep e figura implementados com `delta_x/delta_z=true`; falta overlay/referência digitizada |
+| Fig. 6 | APE LiNbO3 | Sim (60 linhas) | Sim (SVG) | 4 testes sweep | **PARTIAL** | Sweep de 4 modos implementado; `C(x,y)` ainda é proxy Gaussian derivada de constantes de difusão |
+| Fig. 7 | Ti:LiNbO3 | Sim (18 pts) | Sim (SVG) | 4 testes sweep | **PARTIAL** | Sweep em W e `W_x/W_y` implementados; falta estudo de convergência da extração FWHM |
 
 ---
 
@@ -298,32 +325,17 @@ bash scripts/run_case.sh cases/case6_ti_linbo3.yaml audit_case6
 # 1. Compilar
 ./scripts/build.sh
 
-# 2. Executar suíte completa de testes (29 testes)
+# 2. Executar suíte completa de testes (41 testes)
 ./scripts/test.sh
 # Equivalente: /usr/bin/ctest --test-dir build --output-on-failure
 
-# 3. Reproduzir Caso 2 (Fig. 2) — resultado validado
-python3 scripts/run_planar_diffuse_sweep.py \
-  --output-root out/planar_diffuse_sweep/case2_exact_refined
-python3 scripts/consolidate_planar_diffuse_sweep.py \
-  --sweep-root out/planar_diffuse_sweep/case2_exact_refined
-python3 scripts/plot_planar_diffuse_sweep.py \
-  --sweep-root out/planar_diffuse_sweep/case2_exact_refined
+# 3. Reproduzir os sweeps finais atualmente implementados
+bash scripts/run_all.sh
+python3 scripts/plot_all.py
 
-# 4. Reproduzir Caso 1 (Fig. 1) — resultado preliminar
-python3 scripts/run_case1_homogeneous_channel_sweep.py \
-  --output-root out/case1_homogeneous_channel/reference_run_v4_mode_tracking
-python3 scripts/consolidate_case1_homogeneous_channel_sweep.py \
-  --sweep-root out/case1_homogeneous_channel/reference_run_v4_mode_tracking
-python3 scripts/plot_case1_homogeneous_channel_sweep.py \
-  --sweep-root out/case1_homogeneous_channel/reference_run_v4_mode_tracking
-
-# 5. Executar Caso 3 (ponto único — sem validação)
-scripts/run_case.sh cases/channel_diffused_isotropic_case.yaml audit_case3
-
-# 6. Executar pontos de sanidade anisotrópicos
-bash scripts/run_case.sh cases/case5_ape_linbo3.yaml audit_case5
-bash scripts/run_case.sh cases/case6_ti_linbo3.yaml audit_case6
+# 4. Verificação rápida sem sobrescrever out/*/final_run
+bash scripts/run_all.sh --smoke --skip-build
+python3 scripts/plot_all.py --smoke
 ```
 
 > Nota: o comando `ctest` no PATH em `~/.local/bin/ctest` é um wrapper Python com dependência ausente e falha antes de executar a suíte. Use `/usr/bin/ctest` ou `./scripts/test.sh`.
@@ -344,15 +356,15 @@ Para o Caso 1, os valores `B_ref` são extraídos visualmente da Fig. 1. O artig
 
 Os três pontos de comparação do Caso 1 são gerados com a malha smoke (`channel_a2b_b1_smoke.mesh`, 16 nós livres). A malha farfield (`channel_a2b_b1_farfield.mesh`, 238 nós livres) converge para valores ligeiramente diferentes. A curva de dispersão completa em `reference_run_v4_mode_tracking` usa a malha de referência e não o smoke.
 
-### 7.4 Caso 3 — termos de gradiente não ativados (bloqueador: eigensolver simétrico)
+### 7.4 Caso 3 — termos de gradiente ainda não ativados no perfil circular
 
-A implementação atual do perfil circular usa `delta_x = false; delta_z = false` (T-005). Fisicamente, o perfil circular n(x,y) varia em ambas as direções e deveria usar ambos os flags ativos. No entanto, a ativação torna F não-simétrica (conforme docs/02 §3b), e a rota não simétrica atual ainda não foi auditada para os sweeps finais desses perfis. O impacto sobre `neff` dos termos omitidos não foi estimado.
+A implementação atual do perfil circular usa `delta_x = false; delta_z = false`. Fisicamente, o perfil circular n(x,y) varia em ambas as direções e deveria usar ambos os flags ativos. A rota não simétrica já existe e é exercitada nos Casos 4-6, mas a ativação no perfil circular ainda precisa de auditoria própria, porque a geometria por partes do Caso 3 já produz uma curva anômala em B quando os gradientes são omitidos.
 
-### 7.5 Casos 5 e 6 — difusão anisotrópica
+### 7.5 Casos 5 e 6 — difusão anisotrópica e extração modal
 
-O Caso 5 ainda exige um mapa de concentração de prótons C(x,y) obtido por solução separada de uma equação de difusão anisotrópica. O ponto atual usa uma concentração proxy explícita, documentada no YAML e no `material_profile_summary.txt`, apenas como sanidade.
+O Caso 5 ainda exige, para fidelidade física completa, um mapa de concentração de prótons C(x,y) obtido por solução separada de uma equação de difusão anisotrópica. O sweep atual usa uma aproximação Gaussian-Gaussian calculada a partir das constantes de difusão e documentada nos scripts/artefatos.
 
-O Caso 6 já usa diretamente o perfil de índice das Eqs. 11-12 para os ramos extraordinário e ordinário, mas ainda não varre a largura inicial da faixa de Ti nem calcula os tamanhos de modo `W_x` e `W_y`.
+O Caso 6 já usa diretamente o perfil de índice das Eqs. 11-12 para os ramos extraordinário e ordinário e varre a largura inicial da faixa de Ti. Os tamanhos de modo `W_x` e `W_y` são extraídos por FWHM de `|E|^2`, método que ainda deve passar por estudo de convergência de malha.
 
 ---
 
@@ -361,22 +373,22 @@ O Caso 6 já usa diretamente o perfil de índice das Eqs. 11-12 para os ramos ex
 **Reproduzido com sucesso:** O Caso 2 (guia planar difuso) é o único caso validado com precisão quantitativa. O erro máximo de 0.0017% em 26 pontos contra a solução exata confere alta credibilidade ao núcleo do solver.
 
 **Parcialmente reproduzido:**
-- Caso 1 (guia homogêneo): executa e gera curva, mas a geometria precisa ser confirmada antes de qualquer conclusão sobre fidelidade à Fig. 1.
-- Caso 3 (canal circular): sweep e figura existem, mas os termos de gradiente seguem desativados até auditoria da rota não simétrica.
-- Caso 4 (Gaussian-Gaussian): perfil e ponto de sanidade implementados; falta sweep/figura.
-- Caso 5 (APE LiNbO3): perfil de sanidade implementado; falta pré-processador de concentração e sweep/figura.
-- Caso 6 (Ti:LiNbO3): perfil anisotrópico implementado para um ponto; falta sweep em `W`, `W_x/W_y` e figura.
+- Caso 1 (guia homogêneo): executa e gera curva, mas a comparação permanece dependente de referência visual Marcatili/EIM.
+- Caso 3 (canal circular): sweep e figura existem, mas os termos de gradiente seguem desativados no perfil circular.
+- Caso 4 (Gaussian-Gaussian): sweep e figura existem; falta validação contra curvas digitizadas.
+- Caso 5 (APE LiNbO3): sweep e figura existem; falta substituir a proxy Gaussian por solução FEM 2D de difusão, se exigido pela comparação final.
+- Caso 6 (Ti:LiNbO3): sweep, `W_x/W_y` e figura existem; falta estudo de convergência da extração modal.
 
-**Trabalho futuro:** fechar a reprodução final exige sweeps/figuras dos Casos 4, 5 e 6, além da auditoria dos termos de gradiente nos perfis 2D.
+**Trabalho futuro:** fechar a reprodução final exige referências digitizadas/overlays para Casos 4-6, auditoria dos gradientes no Caso 3 e estudo de convergência de `W_x/W_y` no Caso 6.
 
 ---
 
 ## 9. Próximos passos
 
-Ver `TODO.md` para a lista completa. Estado das tarefas imediatas (2026-05-14):
+Ver `TODO.md` para a lista completa. Estado das tarefas imediatas (2026-06-16):
 
 1. **T-004** — CONCLUÍDO: hipótese buried testada e rejeitada; `cover_index = 1.00` mantido.
-2. **T-005** — CONCLUÍDO: bloqueador identificado (eigensolver não-simétrico); flags mantidos desativados com BLOCKER comment.
-3. **Caso 4** — PENDENTE: criar sweep, consolidação e figura da Fig. 5 a partir do perfil Gaussian-Gaussian implementado.
-4. **Caso 5** — PENDENTE: substituir concentração proxy por pré-processador de difusão APE e gerar a Fig. 6.
-5. **Caso 6** — PENDENTE: criar sweep em `W`, extrair `W_x/W_y` e gerar a Fig. 7.
+2. **Caso 3** — PENDENTE: auditar `delta_x/delta_z` no perfil circular.
+3. **Caso 4** — PENDENTE: anexar/digitar referência e quantificar erro da Fig. 5.
+4. **Caso 5** — PENDENTE: decidir se a proxy Gaussian basta ou se será necessário pré-processador FEM 2D de difusão APE.
+5. **Caso 6** — PENDENTE: estudar convergência de malha para `W_x/W_y`.

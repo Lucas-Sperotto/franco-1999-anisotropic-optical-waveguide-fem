@@ -8,7 +8,7 @@
 
 O projeto está **parcialmente pronto**.
 
-A base técnica compila, a suíte passa via `./scripts/test.sh`, e os Casos 1, 2 e 3 já têm pipelines que geram CSV e figura. O Caso 2 é o único caso atualmente pronto como reprodução quantitativa final: tem CSV, figura e comparação analítica no pipeline. O Caso 1 é reprodutível, mas permanece parcial pela comparação visual com curvas Marcatili/EIM. O Caso 3 gera sweep/figura, mas ainda mantém os termos de gradiente desativados. Os Casos 4, 5 e 6 agora têm perfis/YAMLs e execuções pontuais de sanidade, mas ainda não têm sweeps/figuras finais.
+A base técnica compila, a suíte passa via `./scripts/test.sh` e o fluxo `bash scripts/run_all.sh --smoke && python3 scripts/plot_all.py --smoke` valida os artefatos reduzidos dos Casos 1 a 6. O Caso 2 é o único caso atualmente pronto como reprodução quantitativa final: tem CSV, figura e comparação analítica no pipeline. Os Casos 1, 3, 4, 5 e 6 são reprodutíveis, mas permanecem parciais por limitações específicas de validação ou modelagem.
 
 Casos já prontos:
 
@@ -17,10 +17,10 @@ Casos já prontos:
 Casos implementados ou reprodutíveis, mas ainda não prontos:
 
 - Caso 1 - Fig. 1: CSV e figura existem, mas a validação final depende de resolver a geometria `cover_index`/`substrate_index`.
-- Caso 3 - Fig. 4: sweep e figura existem, mas a validação final depende de auditar/ativar `delta_x`/`delta_z`.
-- Caso 4 - Fig. 5: perfil Gaussian-Gaussian, YAML e execução pontual existem; faltam sweep, consolidação e figura.
-- Caso 5 - Fig. 6: perfil APE LiNbO3, YAML e execução pontual existem; falta pré-processador de concentração e sweep/figura.
-- Caso 6 - Fig. 7: perfil Ti:LiNbO3, YAML e execução pontual existem; falta sweep em `W`, extração de tamanhos de modo e figura.
+- Caso 3 - Fig. 4: sweep e figura existem, mas a validação final depende de auditar/ativar `delta_x`/`delta_z` no perfil circular.
+- Caso 4 - Fig. 5: sweep, consolidação e figura existem; falta referência digitizada/overlay para validação quantitativa.
+- Caso 5 - Fig. 6: sweep de 4 modos e figura existem; falta substituir a proxy Gaussian por pré-processador FEM 2D de difusão APE, se necessário para comparação final.
+- Caso 6 - Fig. 7: sweep em `W`, `W_x/W_y` e figura existem; falta estudo de convergência de malha/extração FWHM.
 
 ## 2. Matriz de reprodução
 
@@ -28,10 +28,10 @@ Casos implementados ou reprodutíveis, mas ainda não prontos:
 | --- | --- | --- | --- | --- |
 | Caso 1 - guia homogêneo isotrópico | Fig. 1 | Parcial: geometria confirmada (T-004), docs/03 atualizado (T-017); discrepância explicada por ref. de Marcatili/EIM | Regenerar artefatos finais em `final_run/` (T-013) | Claude/Gemini |
 | Caso 2 - guia planar isotrópico difundido | Fig. 2 | Pronto: executa, gera CSV e SVG, possui comparação analítica | Fixar artefatos finais em `final_run/` (T-014) | Gemini |
-| Caso 3 - canal isotrópico circular | Fig. 4 | Parcial: modelo, YAML, sweep, CSV e figura existem; flags delta bloqueados (T-005 concluído) | Auditar rota não-simétrica antes de ativar `delta_x/delta_z` | Codex + Claude |
-| Caso 4 - canal Gaussian-Gaussian | Fig. 5 | Parcial: fórmula confirmada na ref. [12], perfil C++ e YAML pontual implementados (T-008) | Criar sweep/consolidação/plot da Fig. 5; manter ressalva T-005 dos termos de gradiente | Codex |
-| Caso 5 - APE LiNbO3 | Fig. 6 | Parcial: perfil anisotrópico de sanidade, YAML e CSV pontual implementados (T-011) | Implementar pré-processador de concentração APE, sweep dos 4 modos e figura | Codex |
-| Caso 6 - Ti:LiNbO3 | Fig. 7 | Parcial: perfil Ti anisotrópico, YAML e CSV pontual implementados (T-012) | Criar sweep em largura `W`, extrair `W_x/W_y` e gerar figura | Codex |
+| Caso 3 - canal isotrópico circular | Fig. 4 | Parcial: modelo, YAML, sweep, CSV e figura existem; flags delta seguem desligados neste perfil | Auditar ativação de `delta_x/delta_z` no perfil circular | Codex + Claude |
+| Caso 4 - canal Gaussian-Gaussian | Fig. 5 | Parcial: fórmula confirmada na ref. [12], sweep/CSV/SVG implementados com delta ativo | Anexar/digitar referência e quantificar erro | Codex |
+| Caso 5 - APE LiNbO3 | Fig. 6 | Parcial: sweep/CSV/SVG implementados com 4 modos e proxy Gaussian de concentração | Avaliar necessidade de pré-processador FEM 2D de difusão APE | Codex |
+| Caso 6 - Ti:LiNbO3 | Fig. 7 | Parcial: sweep em `W`, `W_x/W_y`, CSV e SVG implementados | Auditar extração FWHM e convergência de malha | Codex |
 
 ## 3. TODO por fases
 
@@ -69,7 +69,8 @@ Casos implementados ou reprodutíveis, mas ainda não prontos:
   - Arquivos: `docs/02_formulacao_por_elementos_finitos.md`, `docs/05_guia_de_onda_de_canal_difuso_isotropico.md`, `src/material_profile.cpp`, `src/local_assembly.cpp`
   - Critério de aceite: a decisão sobre `delta_x` e `delta_z` no perfil circular fica registrada com justificativa; se a documentação não sustentar mudança, manter o caso conservador e registrar TODO explícito.
   - Comando de teste: verificação documental e `build/waveguide_global_tests`
-  - **Resultado (2026-06-15):** `docs/02` §3 confirma explicitamente que F2, F3 e F4 são não-simétricas quando delta_x/delta_z são ativos ("esparsas e não simétricas devido à presença de termos com dn²/dζ"). Os flags permanecem `false` nos perfis 2D até a rota não simétrica atual ser auditada para os sweeps finais. O bloqueio matemático segue registrado em `src/material_profile.cpp`.
+  - **Resultado (2026-06-15):** `docs/02` §3 confirma explicitamente que F2, F3 e F4 são não-simétricas quando delta_x/delta_z são ativos. Os flags permanecem `false` nos perfis 2D até a rota não simétrica ser auditada.
+  - **Atualização (2026-06-16) — rota não-simétrica operacional:** `src/eigensolver.cpp` usa a rota `general_nonsym_refined`: transformação por Cholesky de `M`, estimativa inicial por simetrização/Jacobi, iteração inversa no operador não simétrico e refinamento por quociente de Rayleigh. Também há eliminação Gaussiana com pivoteamento parcial para os sistemas lineares e correção em `app.cpp` para não calcular confinamento quando um eigenpair não trouxer autovetor. `delta_x/delta_z` foram ativados nos perfis dos Casos 4, 5 e 6. O Caso 3 circular permanece conservador (`false`) até auditoria própria da geometria.
 
 - [x] T-006 — Criar pipeline completo da Fig. 4
   - Responsável: Codex
@@ -80,7 +81,7 @@ Casos implementados ou reprodutíveis, mas ainda não prontos:
 
 - [x] T-007 — Recuperar a fórmula do Caso 4
   - Responsável: Gemini
-  - Arquivos: `docs/05_guia_de_onda_de_canal_difuso_isotropico.md`, `ai_logs/2026-05-14_gemini_task_T-007.md`
+  - Arquivos: `docs/05_guia_de_onda_de_canal_difuso_isotropico.md`
   - Critério de aceite: A forma analítica de `f(x,y)` foi registrada em `docs/05` com justificativa, desbloqueando a implementação.
   - Status: Concluído.
 
@@ -89,7 +90,8 @@ Casos implementados ou reprodutíveis, mas ainda não prontos:
   - Arquivos: `include/waveguide_solver/material_profile.hpp`, `src/material_profile.cpp`, `src/config.cpp`, `src/global_assembly.cpp`, `src/app.cpp`, `cases/case4_gaussian_gaussian_channel.yaml`, `tests/global_tests.cpp`
   - Critério de aceite: perfil implementado sem fórmula inventada, YAML executa, teste de sanidade passa e gera CSV pontual.
   - Comando de teste: `cmake --build build -j && build/waveguide_global_tests`
-  - **Resultado Codex (2026-06-15):** referência [12] organizada em `docs/ref/[12] - sbmo.1993.587213.pdf`; fórmula `f(x,y)=exp[-4(x-x0)^2/a^2] exp[-(y/b)^2]` verificada na legenda da Fig. 4 da referência. Implementados `channel_diffused_isotropic_gaussian_gaussian`, YAML `cases/case4_gaussian_gaussian_channel.yaml`, CTest pontual e checagens em `waveguide_global_tests`. Execução `bash scripts/run_case.sh cases/case4_gaussian_gaussian_channel.yaml audit_case4` gerou `out/case4_gaussian_gaussian_channel/audit_case4/results/neff.csv` com modo líder `n_eff=1.493103`. Limitação: `delta_x/delta_z` seguem desativados até eigensolver generalizado não simétrico.
+  - **Resultado Codex (2026-06-15):** referência [12] organizada; fórmula `f(x,y)` verificada; perfil C++ e YAML implementados; CTest pontual passa. neff=1.493103 (delta=false).
+  - **Atualização (2026-06-16):** delta_x/delta_z ATIVADOS após auditoria da rota `general_nonsym_refined`. Scripts criados: `run_case4_gaussian_gaussian_sweep.py`, `consolidate_case4_gaussian_gaussian_sweep.py`, `plot_case4_gaussian_gaussian_sweep.py`. Sweep completo (17 pontos, V=1.0..5.0) concluído em `out/case4_gaussian_gaussian/final_run/`. Artefatos: `consolidated/dispersion_curve.csv` (51 pares modo/V após filtragem de modos não-guiados), `plots/fig5_like_reference.svg`. Curva modo 1: B cresce monotonicamente de 0.021 (V=1.0) a 0.597 (V=5.0).
 
 - [x] T-009 — Criar contrato de material anisotrópico exercitado
   - Responsável: Codex
@@ -110,14 +112,16 @@ Casos implementados ou reprodutíveis, mas ainda não prontos:
   - Arquivos: `src/material_profile.cpp`, `src/config.cpp`, `src/global_assembly.cpp`, `src/app.cpp`, `cases/case5_ape_linbo3.yaml`, `tests/global_tests.cpp`
   - Critério de aceite: o solver executa pelo menos um ponto da Fig. 6, gera CSV e deixa limitações da difusão anisotrópica documentadas.
   - Comando de teste: `bash scripts/run_case.sh cases/case5_ape_linbo3.yaml audit_case5`
-  - **Resultado Codex (2026-06-16):** implementado `ape_linbo3_anisotropic_sanity` com Eq. 10 de `docs/06` e concentração proxy Gaussian-Gaussian explícita. O YAML `cases/case5_ape_linbo3.yaml` executa 4 modos e gera `out/case5_ape_linbo3/audit_case5/results/neff.csv`; modo líder `n_eff=2.207327`. Limitação registrada: `C(x,y)` ainda não vem de pré-processador FEM de difusão anisotrópica, e `delta_x/delta_z` seguem desativados no ponto de sanidade.
+  - **Resultado Codex (2026-06-16):** `ape_linbo3_anisotropic_sanity` implementado; YAML executa 4 modos; neff=2.207327 (sanidade). Limitação: C(x,y) proxy e delta=false.
+  - **Atualização (2026-06-16):** pré-processador APE para aproximação Gaussian implementado em `scripts/ape_diffusion_preprocessor.py` (`Da_x=0.92`, `Da_z=0.77 µm²/h`; para t=4h: dx=3.836665, dy=3.509986). `case5_ape_linbo3.yaml` atualizado para `peak_concentration=1.00`. delta_x/delta_z ATIVADOS. Scripts: `run_case5_ape_linbo3_sweep.py`, `consolidate_case5_ape_linbo3_sweep.py`, `plot_case5_ape_linbo3_sweep.py`. Sweep (15 pontos, t=0.3h..10h, V=2.24..12.92) concluído em `out/case5_ape_linbo3/final_run/`. Artefatos: `consolidated/dispersion_curve.csv` (60 linhas, 4 modos × 15 pontos de tempo), `plots/fig6_like_reference.svg`. Modo 1 monotônico: B=0.872→0.990.
 
 - [x] T-012 — Implementar o Caso 6, Ti:LiNbO3
   - Responsável: Codex
   - Arquivos: `src/material_profile.cpp`, `src/config.cpp`, `src/global_assembly.cpp`, `src/app.cpp`, `cases/case6_ti_linbo3.yaml`, `tests/global_tests.cpp`
   - Critério de aceite: o solver executa pelo menos um ponto da Fig. 7, gera CSV e separa corretamente parâmetros ordinário/extraordinário.
   - Comando de teste: `bash scripts/run_case.sh cases/case6_ti_linbo3.yaml audit_case6`
-  - **Resultado Codex (2026-06-16):** implementado `ti_diffused_linbo3_anisotropic` com Eqs. 11-12 de `docs/06`, usando parâmetros extraordinários e ordinários separados. O YAML `cases/case6_ti_linbo3.yaml` executa um ponto em `W=7 um` e gera `out/case6_ti_linbo3/audit_case6/results/neff.csv`; modo líder `n_eff=2.210077`. O CSV nodal exporta `nx` e `nz` para auditar a separação dos ramos. Falta sweep em `W`, extração de `W_x/W_y` e figura.
+  - **Resultado Codex (2026-06-16):** `ti_diffused_linbo3_anisotropic` implementado; YAML executa em W=7µm; neff=2.210077. Exporta nx/nz separados. Delta=false (sanidade).
+  - **Atualização (2026-06-16):** delta_x/delta_z ATIVADOS. Scripts: `run_case6_ti_linbo3_sweep.py` (W=3..12 µm, 18 pontos), `consolidate_case6_ti_linbo3_sweep.py` (extrai W_x/W_y via FWHM de |E|² com max-binning), `plot_case6_ti_linbo3_sweep.py` (neff + W_x + W_y vs W, dois eixos Y). Sweep concluído (18 pontos, W=3..12 µm) em `out/case6_ti_linbo3/final_run/`. Artefatos: `consolidated/neff_mode_sizes.csv` (18 linhas), `plots/fig7_like_reference.svg`. neff cresce monotonicamente de 2.20908 (W=3µm) a 2.21054 (W=12µm). W_x mínimo ≈4.70 µm em W=7µm (spot de menor largura); W_y decresce de 4.29 para 4.14 µm conforme o campo se confina.
 
 ### Fase C - Geração de CSVs e figuras
 
@@ -148,7 +152,7 @@ Casos implementados ou reprodutíveis, mas ainda não prontos:
   - Arquivos: `scripts/run_all.sh`, `scripts/plot_all.py`
   - Critério de aceite: um comando roda os casos implementados e outro gera/consolida as figuras disponíveis, sem fingir que Casos 4-6 estão prontos.
   - Comando de teste: `bash scripts/run_all.sh && python3 scripts/plot_all.py`
-  - **Resultado Codex (2026-06-16):** `scripts/run_all.sh` e `scripts/plot_all.py` agora incluem os pontos de sanidade dos Casos 4, 5 e 6. Validação executada: `bash scripts/run_all.sh --smoke && python3 scripts/plot_all.py --smoke`. O `plot_all.py` lista como pendentes apenas os sweeps/figuras finais e grava `out/reproduction_artifacts.csv`.
+  - **Resultado Codex (2026-06-16):** `scripts/run_all.sh` e `scripts/plot_all.py` agora incluem os sweeps dos Casos 1 a 6. Validação executada: `bash scripts/run_all.sh --smoke --skip-build && python3 scripts/plot_all.py --smoke`. O `plot_all.py` verifica os artefatos reduzidos e grava `out/reproduction_artifacts.csv`.
 
 ### Fase D - Documentação científica
 
@@ -164,7 +168,7 @@ Casos implementados ou reprodutíveis, mas ainda não prontos:
   - Arquivos: `docs/09_resumo_dos_casos_de_teste.md`
   - Critério de aceite: Caso 2 aparece como pronto; Casos 1, 3, 4, 5 e 6 aparecem como parciais, distinguindo figuras finais de pontos de sanidade.
   - Comando de teste: verificação manual
-  - **Resultado (2026-06-16):** seção "Estado atual de reprodução" atualizada com: Caso 1 com resultado T-004; Caso 3 com sweep/figura e bloqueio de gradientes; Caso 4 com T-007/T-008 em nível pontual; Casos 5-6 com T-011/T-012 em nível pontual de sanidade e limitações explícitas.
+  - **Resultado (2026-06-16):** seção "Estado atual de reprodução" atualizada com: Caso 1 com resultado T-004; Caso 2 PASS; Caso 3 com sweep/figura e bloqueio de gradientes; Casos 4-6 com sweeps, CSVs, SVGs e limitações explícitas.
 
 - [x] T-019 — Documentar o Caso 3 depois do sweep
   - Responsável: Claude
@@ -180,7 +184,7 @@ Casos implementados ou reprodutíveis, mas ainda não prontos:
   - Arquivos: `RESULTADOS_REPRODUCAO.md`
   - Critério de aceite: o relatório lista metodologia, comandos, tabelas, CSVs e figuras dos casos prontos; casos pendentes são declarados como pendentes, não como validados.
   - Comando de teste: `/usr/bin/ctest --test-dir build --output-on-failure`
-  - **Resultado (2026-06-16):** relatório atualizado com Casos 5 e 6 como pontos de sanidade implementados. Estado atual: 1 caso PASS (Fig. 2) e 5 casos PARTIAL (Figs. 1, 4, 5, 6 e 7), sem casos MISSING na camada de execução pontual.
+  - **Resultado (2026-06-16):** relatório atualizado com Casos 4, 5 e 6 como sweeps implementados. Estado atual: 1 caso PASS (Fig. 2) e 5 casos PARTIAL com artefatos reproduzíveis (Figs. 1, 4, 5, 6 e 7).
 
 ### Fase F - Limpeza final do repositório
 
@@ -189,14 +193,14 @@ Casos implementados ou reprodutíveis, mas ainda não prontos:
   - Arquivos: `README.md`
   - Critério de aceite: README inclui estado por caso, comandos reais, dependências e caminho dos artefatos finais.
   - Comando de teste: verificação manual
-  - **Resultado Codex (2026-06-15):** README atualizado com tabela de estado por figura, comandos `build/test`, fluxo `run_all/plot_all`, execução pontual e caminhos dos artefatos principais.
+  - **Resultado Codex (2026-06-16):** README atualizado com tabela de estado por figura, suíte de 41 testes, fluxo `run_all/plot_all` cobrindo Casos 1-6 e caminhos dos artefatos finais.
 
 - [x] T-022 — Limpar e organizar saídas finais
   - Responsável: Codex
-  - Arquivos: `out/README.md`, `out/case1_homogeneous_channel/final_run/`, `out/planar_diffuse_sweep/final_run/`, `out/case3_channel_diffused_isotropic/final_run/`
+  - Arquivos: `out/README.md`, `out/case1_homogeneous_channel/final_run/`, `out/planar_diffuse_sweep/final_run/`, `out/case3_channel_diffused_isotropic/final_run/`, `out/case4_gaussian_gaussian/final_run/`, `out/case5_ape_linbo3/final_run/`, `out/case6_ti_linbo3/final_run/`
   - Critério de aceite: saídas exploratórias ficam separadas das saídas finais; nenhum resultado solto na raiz é necessário para reproduzir o relatório.
   - Comando de teste: `find out -maxdepth 3 -type f | sort`
-  - **Resultado Codex (2026-06-15):** `out/README.md` passou a declarar as três pastas finais canônicas e a classificar as demais saídas como exploratórias/históricas. Nenhum artefato antigo foi apagado ou movido, para preservar referências existentes em relatórios. `plot_all.py --smoke` verificou os artefatos finais esperados no fluxo reduzido.
+  - **Resultado Codex (2026-06-16):** `out/README.md` declara as seis pastas finais canônicas e classifica as demais saídas como exploratórias/históricas. Nenhum artefato antigo foi apagado ou movido, para preservar referências existentes em relatórios. `plot_all.py --smoke` verificou os artefatos finais esperados no fluxo reduzido.
 
 ## 4. Divisão por IA
 
@@ -217,7 +221,7 @@ Casos implementados ou reprodutíveis, mas ainda não prontos:
 
 - Implementar patches pequenos e verificáveis.
 - Manter build, CTest, scripts e artefatos reproduzíveis.
-- Criar o CTest do Caso 3, pipelines de sweep/plot, orquestradores finais e perfis materiais futuros quando a fórmula estiver documentada.
+- Manter os CTests dos sweeps dos Casos 1-6, orquestradores finais e perfis materiais futuros quando a fórmula estiver documentada.
 
 ## 5. Comandos finais esperados
 
@@ -228,6 +232,10 @@ cmake -S . -B build
 cmake --build build -j
 /usr/bin/ctest --test-dir build --output-on-failure
 
+./scripts/test.sh
+bash scripts/run_all.sh
+python3 scripts/plot_all.py
+
 python3 scripts/run_case1_homogeneous_channel_sweep.py --output-root out/case1_homogeneous_channel/final_run
 python3 scripts/consolidate_case1_homogeneous_channel_sweep.py --sweep-root out/case1_homogeneous_channel/final_run
 python3 scripts/plot_case1_homogeneous_channel_sweep.py --sweep-root out/case1_homogeneous_channel/final_run
@@ -236,30 +244,21 @@ python3 scripts/run_planar_diffuse_sweep.py --output-root out/planar_diffuse_swe
 python3 scripts/consolidate_planar_diffuse_sweep.py --sweep-root out/planar_diffuse_sweep/final_run
 python3 scripts/plot_planar_diffuse_sweep.py --sweep-root out/planar_diffuse_sweep/final_run
 
-bash scripts/run_case.sh cases/channel_diffused_isotropic_case.yaml final_point_case3
-bash scripts/run_case.sh cases/case4_gaussian_gaussian_channel.yaml audit_case4
-bash scripts/run_case.sh cases/case5_ape_linbo3.yaml audit_case5
-bash scripts/run_case.sh cases/case6_ti_linbo3.yaml audit_case6
-```
-
-Comandos esperados ao final das tarefas:
-
-```bash
-./scripts/test.sh
-bash scripts/run_all.sh
-python3 scripts/plot_all.py
-
 python3 scripts/run_case3_channel_diffused_sweep.py --output-root out/case3_channel_diffused_isotropic/final_run
 python3 scripts/consolidate_case3_channel_diffused_sweep.py --sweep-root out/case3_channel_diffused_isotropic/final_run
 python3 scripts/plot_case3_channel_diffused_sweep.py --sweep-root out/case3_channel_diffused_isotropic/final_run
-```
 
-Pendências após T-011/T-012:
+python3 scripts/run_case4_gaussian_gaussian_sweep.py --output-root out/case4_gaussian_gaussian/final_run
+python3 scripts/consolidate_case4_gaussian_gaussian_sweep.py --sweep-root out/case4_gaussian_gaussian/final_run
+python3 scripts/plot_case4_gaussian_gaussian_sweep.py --sweep-root out/case4_gaussian_gaussian/final_run
 
-```bash
-# Caso 4: criar scripts equivalentes de sweep/consolidação/plot para a Fig. 5.
-# Caso 5: substituir a concentração proxy por pré-processador de difusão APE e gerar a Fig. 6.
-# Caso 6: criar sweep em W, extrair W_x/W_y e gerar a Fig. 7.
+python3 scripts/run_case5_ape_linbo3_sweep.py --output-root out/case5_ape_linbo3/final_run
+python3 scripts/consolidate_case5_ape_linbo3_sweep.py --sweep-root out/case5_ape_linbo3/final_run
+python3 scripts/plot_case5_ape_linbo3_sweep.py --sweep-root out/case5_ape_linbo3/final_run
+
+python3 scripts/run_case6_ti_linbo3_sweep.py --output-root out/case6_ti_linbo3/final_run
+python3 scripts/consolidate_case6_ti_linbo3_sweep.py --sweep-root out/case6_ti_linbo3/final_run
+python3 scripts/plot_case6_ti_linbo3_sweep.py --sweep-root out/case6_ti_linbo3/final_run
 ```
 
 ## 6. Arquivos finais obrigatórios
@@ -293,14 +292,33 @@ Pendências após T-011/T-012:
 - `scripts/run_case3_channel_diffused_sweep.py`
 - `scripts/consolidate_case3_channel_diffused_sweep.py`
 - `scripts/plot_case3_channel_diffused_sweep.py`
+- `scripts/run_case4_gaussian_gaussian_sweep.py`
+- `scripts/consolidate_case4_gaussian_gaussian_sweep.py`
+- `scripts/plot_case4_gaussian_gaussian_sweep.py`
+- `scripts/ape_diffusion_preprocessor.py`
+- `scripts/run_case5_ape_linbo3_sweep.py`
+- `scripts/consolidate_case5_ape_linbo3_sweep.py`
+- `scripts/plot_case5_ape_linbo3_sweep.py`
+- `scripts/run_case6_ti_linbo3_sweep.py`
+- `scripts/consolidate_case6_ti_linbo3_sweep.py`
+- `scripts/plot_case6_ti_linbo3_sweep.py`
 - `tests/check_smoke_outputs.cmake`
 - `tests/check_case3_sweep_outputs.py`
+- `tests/check_case4_sweep_outputs.py`
+- `tests/check_case5_sweep_outputs.py`
+- `tests/check_case6_sweep_outputs.py`
 - `out/case1_homogeneous_channel/final_run/consolidated/*.csv`
 - `out/case1_homogeneous_channel/final_run/plots/*.svg`
 - `out/planar_diffuse_sweep/final_run/consolidated/*.csv`
 - `out/planar_diffuse_sweep/final_run/plots/*.svg`
 - `out/case3_channel_diffused_isotropic/final_run/consolidated/*.csv`
 - `out/case3_channel_diffused_isotropic/final_run/plots/*.svg`
+- `out/case4_gaussian_gaussian/final_run/consolidated/*.csv`
+- `out/case4_gaussian_gaussian/final_run/plots/*.svg`
+- `out/case5_ape_linbo3/final_run/consolidated/*.csv`
+- `out/case5_ape_linbo3/final_run/plots/*.svg`
+- `out/case6_ti_linbo3/final_run/consolidated/*.csv`
+- `out/case6_ti_linbo3/final_run/plots/*.svg`
 - `ai_logs/2024-05-21_gemini_auditoria_final.md`
 - `ai_logs/2026-05-14_claude_auditoria_documental_final.md`
 - `ai_logs/2026-05-14_codex_auditoria_tecnica_final.md`
@@ -308,14 +326,6 @@ Pendências após T-011/T-012:
 
 ## 7. Próxima ação recomendada
 
-Próximo prompt recomendado: enviar para **Claude**.
+Próxima frente sugerida: validação quantitativa dos Casos 4-6.
 
-Tarefa: **T-004 — Resolver a geometria do Caso 1**.
-
-Motivo: T-001, T-002 e T-003 já estão concluídas. A próxima pendência que afeta o fechamento científico é confirmar se a Fig. 1 usa guia enterrado simétrico ou guia de superfície assimétrico. Isso deve ser resolvido antes de qualquer ajuste numérico ou atualização definitiva da validação do Caso 1.
-
-Prompt sugerido:
-
-```text
-Resolva T-004 do TODO.md: investigue a geometria do Caso 1 comparando docs/03, docs/ref/[7] e cases/homogeneous_channel_isotropic_case.yaml. Confirme se a Fig. 1 usa guia buried simétrico ou superfície assimétrica, proponha ou aplique a correção mínima no YAML se confirmada, rode o sweep smoke do Caso 1 e registre os resultados sem marcar PASS se a evidência continuar inconclusiva.
-```
+Tarefa: anexar ou digitalizar curvas de referência para Figs. 5, 6 e 7, gerar overlays nos scripts de plot e registrar métricas de erro. Em paralelo, auditar a ativação de `delta_x/delta_z` no perfil circular do Caso 3 e estudar a convergência de malha da extração `W_x/W_y` no Caso 6.
