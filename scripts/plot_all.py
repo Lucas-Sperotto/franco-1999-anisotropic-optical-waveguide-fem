@@ -22,15 +22,6 @@ class CasePipeline:
     required_artifacts: tuple[Path, ...]
 
 
-@dataclass(frozen=True)
-class PointPipeline:
-    case_id: str
-    description: str
-    default_root: Path
-    smoke_root: Path
-    required_artifacts: tuple[Path, ...]
-
-
 IMPLEMENTED_CASES = (
     CasePipeline(
         case_id="case1",
@@ -71,51 +62,53 @@ IMPLEMENTED_CASES = (
             Path("plots/fig4_like_reference.svg"),
         ),
     ),
-)
-
-IMPLEMENTED_POINTS = (
-    PointPipeline(
+    CasePipeline(
         case_id="case4",
-        description="Fig. 5 - Gaussian-Gaussian diffused channel sanity point",
-        default_root=Path("out/case4_gaussian_gaussian_channel/final_point"),
-        smoke_root=Path("build/test_output/run_all_smoke/case4_gaussian_gaussian_channel"),
+        description="Fig. 5 - Gaussian-Gaussian diffused channel",
+        default_root=Path("out/case4_gaussian_gaussian/final_run"),
+        smoke_root=Path("build/test_output/run_all_smoke/case4_gaussian_gaussian"),
+        consolidate_script="scripts/consolidate_case4_gaussian_gaussian_sweep.py",
+        plot_script="scripts/plot_case4_gaussian_gaussian_sweep.py",
         required_artifacts=(
-            Path("results/neff.csv"),
-            Path("results/dispersion_curve_points.csv"),
-            Path("results/nodal_material_fields.csv"),
-            Path("results/material_profile_summary.txt"),
+            Path("consolidated/dispersion_curve.csv"),
+            Path("consolidated/consolidation_summary.txt"),
+            Path("plots/fig5_like_reference.svg"),
         ),
     ),
-    PointPipeline(
+    CasePipeline(
         case_id="case5",
-        description="Fig. 6 - APE LiNbO3 anisotropic sanity point",
-        default_root=Path("out/case5_ape_linbo3/final_point"),
+        description="Fig. 6 - APE LiNbO3 anisotropic guide",
+        default_root=Path("out/case5_ape_linbo3/final_run"),
         smoke_root=Path("build/test_output/run_all_smoke/case5_ape_linbo3"),
+        consolidate_script="scripts/consolidate_case5_ape_linbo3_sweep.py",
+        plot_script="scripts/plot_case5_ape_linbo3_sweep.py",
         required_artifacts=(
-            Path("results/neff.csv"),
-            Path("results/dispersion_curve_points.csv"),
-            Path("results/nodal_material_fields.csv"),
-            Path("results/material_profile_summary.txt"),
+            Path("consolidated/dispersion_curve.csv"),
+            Path("consolidated/consolidation_summary.txt"),
+            Path("plots/fig6_like_reference.svg"),
         ),
     ),
-    PointPipeline(
+    CasePipeline(
         case_id="case6",
-        description="Fig. 7 - Ti:LiNbO3 anisotropic sanity point",
-        default_root=Path("out/case6_ti_linbo3/final_point"),
+        description="Fig. 7 - Ti:LiNbO3 anisotropic guide",
+        default_root=Path("out/case6_ti_linbo3/final_run"),
         smoke_root=Path("build/test_output/run_all_smoke/case6_ti_linbo3"),
+        consolidate_script="scripts/consolidate_case6_ti_linbo3_sweep.py",
+        plot_script="scripts/plot_case6_ti_linbo3_sweep.py",
         required_artifacts=(
-            Path("results/neff.csv"),
-            Path("results/dispersion_curve_points.csv"),
-            Path("results/nodal_material_fields.csv"),
-            Path("results/material_profile_summary.txt"),
+            Path("consolidated/neff_mode_sizes.csv"),
+            Path("consolidated/consolidation_summary.txt"),
+            Path("plots/fig7_like_reference.svg"),
         ),
     ),
 )
 
-PENDING_CASES = (
-    "case4/Fig. 5 Gaussian-Gaussian channel: sweep and figure not implemented yet",
-    "case5/Fig. 6 APE LiNbO3: full dispersion sweep and concentration preprocessor not implemented yet",
-    "case6/Fig. 7 Ti:LiNbO3: W sweep, mode-size extraction, and figure not implemented yet",
+KNOWN_LIMITATIONS = (
+    "case1/Fig. 1: quantitative reference remains visual/Marcatili-EIM, not digitized from the paper",
+    "case3/Fig. 4: circular profile still keeps delta_x/delta_z disabled pending a separate gradient audit",
+    "case4-case6: figures are generated, but paper overlays/digitized reference curves are not yet attached",
+    "case5/Fig. 6: APE concentration uses a Gaussian proxy derived from diffusion constants, not a full 2D diffusion solve",
+    "case6/Fig. 7: W_x/W_y are extracted from modal_fields.csv by FWHM binning and remain mesh-sensitive",
 )
 
 
@@ -134,9 +127,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--case1-root", default=None, help="Override Case 1 sweep root.")
     parser.add_argument("--case2-root", default=None, help="Override Case 2 sweep root.")
     parser.add_argument("--case3-root", default=None, help="Override Case 3 sweep root.")
-    parser.add_argument("--case4-root", default=None, help="Override Case 4 point root.")
-    parser.add_argument("--case5-root", default=None, help="Override Case 5 point root.")
-    parser.add_argument("--case6-root", default=None, help="Override Case 6 point root.")
+    parser.add_argument("--case4-root", default=None, help="Override Case 4 sweep root.")
+    parser.add_argument("--case5-root", default=None, help="Override Case 5 sweep root.")
+    parser.add_argument("--case6-root", default=None, help="Override Case 6 sweep root.")
     parser.add_argument(
         "--manifest",
         default="out/reproduction_artifacts.csv",
@@ -152,7 +145,7 @@ def resolve_repo_root() -> Path:
 def resolve_case_root(
     repo_root: Path,
     args: argparse.Namespace,
-    pipeline: CasePipeline | PointPipeline,
+    pipeline: CasePipeline,
 ) -> Path:
     override = getattr(args, f"{pipeline.case_id}_root")
     if override:
@@ -221,23 +214,6 @@ def main() -> int:
                 }
             )
 
-    for pipeline in IMPLEMENTED_POINTS:
-        root = resolve_case_root(repo_root, args, pipeline)
-        if not root.exists():
-            raise FileNotFoundError(
-                f"Point root not found for {pipeline.case_id}: {root}\n"
-                "Run bash scripts/run_all.sh first, or pass the matching --case*-root."
-            )
-        for artifact in check_artifacts(root, pipeline.required_artifacts):
-            manifest_rows.append(
-                {
-                    "case_id": pipeline.case_id,
-                    "description": pipeline.description,
-                    "sweep_root": str(root),
-                    "artifact": str(artifact),
-                }
-            )
-
     manifest_path = Path(args.manifest)
     if not manifest_path.is_absolute():
         manifest_path = repo_root / manifest_path
@@ -247,9 +223,9 @@ def main() -> int:
     for row in manifest_rows:
         print(f"  {row['case_id']}: {row['artifact']}")
 
-    print("\nCases intentionally left pending:")
-    for pending in PENDING_CASES:
-        print(f"  - {pending}")
+    print("\nKnown limitations:")
+    for limitation in KNOWN_LIMITATIONS:
+        print(f"  - {limitation}")
 
     print(f"\nArtifact manifest: {manifest_path.resolve()}")
     return 0

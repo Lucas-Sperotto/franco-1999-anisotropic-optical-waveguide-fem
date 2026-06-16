@@ -376,4 +376,145 @@ if(BUILD_TESTING)
         PROPERTIES
             FIXTURES_REQUIRED waveguide_case3_sweep_plotted_fixture
     )
+
+    add_test(NAME waveguide_case4_sweep_smoke
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/run_case4_gaussian_gaussian_sweep.py
+            --smoke
+            --output-root ${CMAKE_BINARY_DIR}/test_output/case4_sweep
+    )
+
+    set_tests_properties(waveguide_case4_sweep_smoke
+        PROPERTIES
+            FIXTURES_SETUP waveguide_case4_sweep_fixture
+    )
+
+    add_test(NAME waveguide_case4_sweep_consolidate
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/consolidate_case4_gaussian_gaussian_sweep.py
+            --sweep-root ${CMAKE_BINARY_DIR}/test_output/case4_sweep
+    )
+
+    set_tests_properties(waveguide_case4_sweep_consolidate
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_case4_sweep_fixture
+            FIXTURES_SETUP waveguide_case4_sweep_consolidated_fixture
+    )
+
+    add_test(NAME waveguide_case4_sweep_plot
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/plot_case4_gaussian_gaussian_sweep.py
+            --sweep-root ${CMAKE_BINARY_DIR}/test_output/case4_sweep
+    )
+
+    set_tests_properties(waveguide_case4_sweep_plot
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_case4_sweep_consolidated_fixture
+            FIXTURES_SETUP waveguide_case4_sweep_plotted_fixture
+    )
+
+    add_test(NAME waveguide_case4_sweep_artifacts
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/check_case4_sweep_outputs.py
+            ${CMAKE_BINARY_DIR}/test_output/case4_sweep
+    )
+
+    set_tests_properties(waveguide_case4_sweep_artifacts
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_case4_sweep_plotted_fixture
+    )
+
+    add_test(NAME waveguide_case5_sweep_smoke
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/run_case5_ape_linbo3_sweep.py
+            --smoke
+            --output-root ${CMAKE_BINARY_DIR}/test_output/case5_sweep
+    )
+
+    set_tests_properties(waveguide_case5_sweep_smoke
+        PROPERTIES
+            FIXTURES_SETUP waveguide_case5_sweep_fixture
+    )
+
+    add_test(NAME waveguide_case5_sweep_consolidate
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/consolidate_case5_ape_linbo3_sweep.py
+            --sweep-root ${CMAKE_BINARY_DIR}/test_output/case5_sweep
+    )
+
+    set_tests_properties(waveguide_case5_sweep_consolidate
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_case5_sweep_fixture
+            FIXTURES_SETUP waveguide_case5_sweep_consolidated_fixture
+    )
+
+    add_test(NAME waveguide_case5_sweep_plot
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/plot_case5_ape_linbo3_sweep.py
+            --sweep-root ${CMAKE_BINARY_DIR}/test_output/case5_sweep
+    )
+
+    set_tests_properties(waveguide_case5_sweep_plot
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_case5_sweep_consolidated_fixture
+            FIXTURES_SETUP waveguide_case5_sweep_plotted_fixture
+    )
+
+    add_test(NAME waveguide_case5_sweep_artifacts
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/check_case5_sweep_outputs.py
+            ${CMAKE_BINARY_DIR}/test_output/case5_sweep
+    )
+
+    set_tests_properties(waveguide_case5_sweep_artifacts
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_case5_sweep_plotted_fixture
+    )
+
+    add_test(NAME waveguide_case6_sweep_smoke
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/run_case6_ti_linbo3_sweep.py
+            --smoke
+            --output-root ${CMAKE_BINARY_DIR}/test_output/case6_sweep
+    )
+
+    set_tests_properties(waveguide_case6_sweep_smoke
+        PROPERTIES
+            FIXTURES_SETUP waveguide_case6_sweep_fixture
+    )
+
+    add_test(NAME waveguide_case6_sweep_consolidate
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/consolidate_case6_ti_linbo3_sweep.py
+            --sweep-root ${CMAKE_BINARY_DIR}/test_output/case6_sweep
+    )
+
+    set_tests_properties(waveguide_case6_sweep_consolidate
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_case6_sweep_fixture
+            FIXTURES_SETUP waveguide_case6_sweep_consolidated_fixture
+    )
+
+    add_test(NAME waveguide_case6_sweep_plot
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/plot_case6_ti_linbo3_sweep.py
+            --sweep-root ${CMAKE_BINARY_DIR}/test_output/case6_sweep
+    )
+
+    set_tests_properties(waveguide_case6_sweep_plot
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_case6_sweep_consolidated_fixture
+            FIXTURES_SETUP waveguide_case6_sweep_plotted_fixture
+    )
+
+    add_test(NAME waveguide_case6_sweep_artifacts
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tests/check_case6_sweep_outputs.py
+            ${CMAKE_BINARY_DIR}/test_output/case6_sweep
+    )
+
+    set_tests_properties(waveguide_case6_sweep_artifacts
+        PROPERTIES
+            FIXTURES_REQUIRED waveguide_case6_sweep_plotted_fixture
+    )
 endif()

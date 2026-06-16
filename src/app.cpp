@@ -547,7 +547,7 @@ std::string build_modal_metrics_csv(const GeneralizedEigenSolution& solution,
             stream << (guided_by_index ? "yes" : "no") << ",";
 
             const ModeConfinementDiagnostics diagnostics =
-                rectangular_channel_case
+                rectangular_channel_case && !eigenpair.reduced_mode.empty()
                     ? compute_rectangular_core_mode_confinement(
                           mesh,
                           config,
@@ -753,8 +753,8 @@ int run_application(int argc, char** argv) {
                    "for y >= surface_y; n = n_cover for y < surface_y.\n"
                 << "formula_source: docs/ref/[12] - sbmo.1993.587213.pdf, "
                    "Fig. 4 caption, reused by Franco et al. Fig. 5.\n"
-                << "gradient_terms_note: delta_x/delta_z remain disabled until "
-                   "the non-symmetric route is audited for final sweeps.\n";
+                << "gradient_terms_note: delta_x/delta_z enabled; the reduced "
+                   "generalized problem uses the general_nonsym_refined route.\n";
         } else if (config.material_model == "ape_linbo3_anisotropic_sanity") {
             const ApeLinbo3Profile profile{
                 config.cover_index,
@@ -794,11 +794,11 @@ int run_application(int argc, char** argv) {
                    "* exp[-(y-surface_y)^2/dy^2] for y >= surface_y; "
                    "n_x = n_es + delta_n_e * (1 - exp[-11 C]); n_z = n_ordinary.\n"
                 << "implementation_limitation: docs/06 states that C(x,y) is produced "
-                   "by a separate 2D anisotropic diffusion solve. This point uses an "
-                   "explicit Gaussian proxy concentration only as a sanity check until "
-                   "that preprocessor is implemented.\n"
-                << "gradient_terms_note: delta_x/delta_z remain disabled for this "
-                   "sanity point.\n";
+                   "by a separate 2D anisotropic diffusion solve. The current sweep uses "
+                   "a Gaussian proxy concentration derived from diffusion constants, not "
+                   "a full diffusion FEM solve.\n"
+                << "gradient_terms_note: delta_x/delta_z enabled; the reduced "
+                   "generalized problem uses the general_nonsym_refined route.\n";
         } else if (config.material_model == "ti_diffused_linbo3_anisotropic") {
             const TiDiffusedLinbo3Profile profile{
                 config.cover_index,
@@ -846,9 +846,9 @@ int run_application(int argc, char** argv) {
                    "[(n_b_e,o + delta_n_s_e,o)^2 - n_b_e,o^2] "
                    "* exp[-(y-surface_y)^2/d_y_e,o^2] * f(2x/W), with f from docs/06 Eq. 12.\n"
                 << "axis_mapping: n_x uses the extraordinary branch and n_z uses the "
-                   "ordinary branch for this x-cut Ex-mode sanity point.\n"
-                << "gradient_terms_note: delta_x/delta_z remain disabled until final "
-                   "non-symmetric-gradient sweeps are audited.\n";
+                   "ordinary branch for this x-cut Ex-mode reproduction sweep.\n"
+                << "gradient_terms_note: delta_x/delta_z enabled; the reduced "
+                   "generalized problem uses the general_nonsym_refined route.\n";
         } else if (config.material_model == "rectangular_channel_step_index") {
             const RectangularChannelStepIndexProfile profile{
                 config.cover_index,
@@ -931,7 +931,7 @@ int run_application(int argc, char** argv) {
                        "homogeneous isotropic constant case, the first planar diffuse "
                        "isotropic variable-coefficient case, the initial homogeneous "
                        "rectangular channel case, and the implemented diffused channel "
-                       "isotropic and anisotropic sanity cases.\n";
+                       "isotropic and anisotropic cases.\n";
         run_summary << "schema_version: " << config.schema_version << "\n";
         run_summary << "case_id: " << config.case_id << "\n";
         run_summary << "description: " << config.description << "\n";
@@ -1382,7 +1382,7 @@ int run_application(int argc, char** argv) {
             "This run validates local quadrature-based element matrices, global assembly,\n"
             "Dirichlet elimination on boundary nodes, and a dense generalized eigen solve\n"
             "for homogeneous, planar diffuse, rectangular channel, diffused channel,\n"
-            "and LiNbO3 anisotropic sanity cases.\n");
+            "and LiNbO3 anisotropic cases.\n");
 
         std::ostringstream execution_log;
         execution_log << "waveguide_solver execution log\n";
@@ -1434,7 +1434,7 @@ int run_application(int argc, char** argv) {
         }
         std::cout << "  material      : " << config.material_model << "\n";
         std::cout << "  output folder : " << output_dir.string() << "\n";
-        std::cout << "  note          : dense global solver active for constant, planar diffuse, rectangular channel, diffused channel, and LiNbO3 anisotropic sanity cases\n";
+        std::cout << "  note          : dense global solver active for constant, planar diffuse, rectangular channel, diffused channel, and LiNbO3 anisotropic cases\n";
 
         return 0;
     } catch (const std::exception& error) {

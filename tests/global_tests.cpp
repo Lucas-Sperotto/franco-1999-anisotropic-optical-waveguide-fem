@@ -311,8 +311,8 @@ int main() {
                     "expected three planar eigenpairs");
         expect_true(!planar_eigen_solution.transformed_matrix_is_symmetric,
                     "the planar transformed matrix should reflect the non-symmetric case");
-        expect_true(planar_eigen_solution.solver_label == "general_qr",
-                    "expected the general dense QR path");
+        expect_true(planar_eigen_solution.solver_label == "general_nonsym_refined",
+                    "expected the non-symmetric refined eigensolver path");
         expect_true(planar_eigen_solution.eigenpairs.front().has_neff,
                     "expected a valid leading n_eff for the planar case");
         expect_true(planar_eigen_solution.eigenpairs.front().eigenvalue >
@@ -564,11 +564,11 @@ int main() {
         expect_true(
             waveguide::is_dense_matrix_symmetric(
                 gaussian_channel_assembly.matrices.M_full),
-            "Gaussian-Gaussian channel M_full should be symmetric while gradient flags are disabled");
+            "Gaussian-Gaussian channel M_full should remain symmetric");
         expect_true(
-            waveguide::is_dense_matrix_symmetric(
+            !waveguide::is_dense_matrix_symmetric(
                 gaussian_channel_assembly.matrices.F_full),
-            "Gaussian-Gaussian channel F_full should be symmetric while gradient flags are disabled");
+            "Gaussian-Gaussian channel F_full should be non-symmetric with gradient flags enabled");
 
         const waveguide::GeneralizedEigenSolution gaussian_channel_eigen_solution =
             waveguide::solve_generalized_eigenproblem_dense(
@@ -627,8 +627,8 @@ int main() {
         expect_true(ape_center_nx2 > ape_center_nz2,
                     "APE LiNbO3 should perturb only the extraordinary/nx branch");
         expect_true(
-            waveguide::is_dense_matrix_symmetric(ape_assembly.matrices.F_full),
-            "APE LiNbO3 F_full should remain symmetric while gradient flags are disabled");
+            !waveguide::is_dense_matrix_symmetric(ape_assembly.matrices.F_full),
+            "APE LiNbO3 F_full should be non-symmetric with gradient flags enabled");
 
         const waveguide::GeneralizedEigenSolution ape_eigen_solution =
             waveguide::solve_generalized_eigenproblem_dense(
@@ -684,8 +684,8 @@ int main() {
                 waveguide::make_default_article_local_assembly_options(
                     2.0 * kPi / 1.523));
         expect_true(
-            waveguide::is_dense_matrix_symmetric(ti_assembly.matrices.F_full),
-            "Ti:LiNbO3 F_full should remain symmetric while gradient flags are disabled");
+            !waveguide::is_dense_matrix_symmetric(ti_assembly.matrices.F_full),
+            "Ti:LiNbO3 F_full should be non-symmetric with gradient flags enabled");
         expect_true(
             waveguide::max_abs_dense_matrix_difference(
                 ti_assembly.matrices.M_full,

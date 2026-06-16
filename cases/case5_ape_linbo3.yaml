@@ -2,7 +2,7 @@ schema_version: 1
 
 case:
   id: case05_ape_linbo3_sanity
-  description: "Case 5 APE LiNbO3 anisotropic sanity point from docs/06 Eq. 10"
+  description: "Case 5 APE LiNbO3 anisotropic base point from docs/06 Eq. 10"
 
 mesh:
   file: ../meshes/channel_a2b_b1_reference.mesh
@@ -13,9 +13,9 @@ material:
   ordinary_index: 2.20
   extraordinary_substrate_index: 2.20
   delta_extraordinary_index: 0.12
-  peak_concentration: 0.01
-  diffusion_width_x: 3.836665
-  diffusion_depth_y: 3.509986
+  peak_concentration: 1.00
+  diffusion_width_x: 3.836665219
+  diffusion_depth_y: 3.509985755
   core_center_x: 0.00
   surface_y: 0.00
 

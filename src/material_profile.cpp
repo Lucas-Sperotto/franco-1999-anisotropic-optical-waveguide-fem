@@ -521,11 +521,8 @@ GlobalNodalMaterialFields make_channel_gaussian_gaussian_global_material(
     validate_channel_gaussian_gaussian_profile(profile);
 
     GlobalNodalMaterialFields fields;
-    // BLOCKER (T-005/T-008): this profile varies in x and y, so the gradient
-    // terms should eventually be active. They are kept disabled until the
-    // non-symmetric route needed by docs/02 §3b is audited for final sweeps.
-    fields.delta_x = false;
-    fields.delta_z = false;
+    fields.delta_x = true;
+    fields.delta_z = true;
     fields.homogeneous = false;
     fields.isotropic = true;
     fields.model_label = "channel_diffused_isotropic_gaussian_gaussian";
@@ -547,11 +544,8 @@ GlobalNodalMaterialFields make_ape_linbo3_global_material(
     validate_ape_linbo3_profile(profile);
 
     GlobalNodalMaterialFields fields;
-    // The APE model varies spatially and should ultimately activate derivative
-    // terms. This sanity implementation keeps them disabled so the current
-    // dense solver path remains comparable to the other point checks.
-    fields.delta_x = false;
-    fields.delta_z = false;
+    fields.delta_x = true;
+    fields.delta_z = true;
     fields.homogeneous = false;
     fields.isotropic = false;
     fields.model_label = "ape_linbo3_anisotropic_sanity";
@@ -579,10 +573,8 @@ GlobalNodalMaterialFields make_ti_diffused_linbo3_global_material(
     validate_ti_diffused_linbo3_profile(profile);
 
     GlobalNodalMaterialFields fields;
-    // Eqs. (11)-(12) vary in x and y. Derivative terms are intentionally
-    // disabled until the non-symmetric path is audited for the final sweeps.
-    fields.delta_x = false;
-    fields.delta_z = false;
+    fields.delta_x = true;
+    fields.delta_z = true;
     fields.homogeneous = false;
     fields.isotropic = false;
     fields.model_label = "ti_diffused_linbo3_anisotropic";

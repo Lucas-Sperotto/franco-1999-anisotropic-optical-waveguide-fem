@@ -2,7 +2,7 @@ schema_version: 1
 
 case:
   id: case06_ti_diffused_linbo3_sanity
-  description: "Case 6 Ti:LiNbO3 anisotropic sanity point from docs/06 Eqs. 11-12"
+  description: "Case 6 Ti:LiNbO3 anisotropic base point from docs/06 Eqs. 11-12"
 
 mesh:
   file: ../meshes/channel_a2b_b1_reference.mesh
