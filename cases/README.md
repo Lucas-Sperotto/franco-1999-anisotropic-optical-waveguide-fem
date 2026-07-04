@@ -34,6 +34,23 @@ e para a extração da constante de propagação normalizada
 
 O sweep preliminar do Caso 1 é automatizado por `scripts/run_case1_homogeneous_channel_sweep.py`, com consolidação em `scripts/consolidate_case1_homogeneous_channel_sweep.py` e gráfico SVG em `scripts/plot_case1_homogeneous_channel_sweep.py`. Os pontos aproximados da Fig. 1 usados para comparação visual preliminar estão em [homogeneous_channel_fig1_reference_points.csv](homogeneous_channel_fig1_reference_points.csv).
 
+Quando uma referência calculável ainda não estiver implementada, pontos lidos em
+pixels de uma figura podem ser convertidos para CSV físico com
+`scripts/pixel_plot_to_csv.py`. O arquivo de entrada deve conter pelo menos
+`pixel_x,pixel_y`; colunas extras como `mode_index`, `curve_label` e `source`
+são preservadas. Exemplo para gerar pontos `V,B`:
+
+```bash
+python3 scripts/pixel_plot_to_csv.py \
+  --input fig5_pixels.csv \
+  --output cases/fig5_gaussian_gaussian_reference_points.csv \
+  --x-column V --y-column B \
+  --x-pixel-a 90 --x-value-a 0 \
+  --x-pixel-b 870 --x-value-b 5 \
+  --y-pixel-a 502 --y-value-a 0 \
+  --y-pixel-b 70 --y-value-b 1
+```
+
 O arquivo [channel_diffused_isotropic_case.yaml](channel_diffused_isotropic_case.yaml) implementa o **Caso 3** como canal difuso isotrópico circular. Ele usa a malha de referência `channel_a2b_b1_reference.mesh`, perfil por partes de `docs/05` e serve de base para o sweep da Fig. 4.
 
 O arquivo [case4_gaussian_gaussian_channel.yaml](case4_gaussian_gaussian_channel.yaml) implementa o caso-base do **Caso 4**, com o perfil Gaussian-Gaussian recuperado da referência [12] e documentado em `docs/05`. O sweep da Fig. 5 é automatizado por `scripts/run_case4_gaussian_gaussian_sweep.py`, com consolidação e gráfico nos scripts correspondentes.
